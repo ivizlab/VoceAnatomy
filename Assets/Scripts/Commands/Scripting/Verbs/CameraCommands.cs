@@ -4,33 +4,23 @@ using UnityEngine;
 
 namespace Assets.Scripts.Scripting
 {
-    [Command("focus", Aliases = new[] { "focus in", "frame" },
-        Help = "Frame what was last shown; with nothing shown yet, frame everything visible")]
+    [Command("focus", Aliases = new[] { "focus in", "frame" }, Args = "[part, ...]",
+        Help = "Frame the selection (or the named parts, which become the selection); with nothing selected, frame everything visible")]
     public class FocusCmd : AnatomyCommand
     {
-        public override string Validate(CommandInvocation inv) => inv.HasArgs ? "takes no arguments (it frames what was last shown)" : null;
+        public override string Validate(CommandInvocation inv) => PartTargets.Validate(PartTargets.Items(inv), allowEmpty: true);
 
         public override IEnumerator Execute(CommandContext ctx)
         {
-            FrameLastShown();
-            yield return WaitForCamera();
-        }
-
-        internal static void FrameLastShown()
-        {
-            SelectedObjectsManagement.Instance.DeselectAllObjects();
-            var targets = CommandSelection.LastShown;
-            if (targets != null)
-            {
-                foreach (var obj in targets.Where(o => o != null))
-                    SelectedObjectsManagement.Instance.SelectObject(obj);
-            }
+            if (ctx.Inv.HasArgs)
+                ShowAndSelect.Run(ctx.Inv, additive: false);
             CameraController.instance.CenterView(true);
+            yield return WaitForCamera();
         }
     }
 
     [Command("zoom", Args = "in | out [percent]",
-        Help = "zoom in N / zoom out N change distance by N percent; plain zoom in frames what was last shown, plain zoom out frames the whole visible body")]
+        Help = "zoom in N / zoom out N change distance by N percent; plain zoom in frames the selection, plain zoom out deselects and frames the whole visible body")]
     public class ZoomCmd : AnatomyCommand
     {
         public override string Validate(CommandInvocation inv) => inv.HasAny("in", "out") ? null : "say zoom in or zoom out";
@@ -44,7 +34,7 @@ namespace Assets.Scripts.Scripting
             }
             else if (zoomIn)
             {
-                FocusCmd.FrameLastShown();
+                CameraController.instance.CenterView(true);
             }
             else
             {

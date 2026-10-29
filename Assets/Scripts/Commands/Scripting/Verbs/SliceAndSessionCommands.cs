@@ -61,7 +61,6 @@ namespace Assets.Scripts.Scripting
             else
             {
                 ActionControl.Instance.ResetAll();
-                CommandSelection.LastShown = null;
             }
             yield break;
         }

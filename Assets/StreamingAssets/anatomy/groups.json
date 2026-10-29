@@ -1,0 +1,12 @@
+{
+  "groups": [
+    { "name": "heart chambers",  "parts": ["left atrium", "right atrium", "left ventricle", "right ventricle"] },
+    { "name": "rotator cuff",    "parts": ["supraspinatus muscle", "infraspinatus muscle", "teres minor muscle", "subscapularis muscle"] },
+    { "name": "quadriceps",      "parts": ["rectus femoris muscle", "vastus lateralis muscle", "vastus medialis muscle", "vastus intermedius muscle"] },
+    { "name": "quads",           "parts": ["quadriceps"] },
+    { "name": "hamstrings",      "parts": ["long head of biceps femoris", "short head of biceps femoris", "semitendinosus muscle", "semimembranosus muscle"] },
+    { "name": "shoulder girdle", "parts": ["clavicle", "scapula"] },
+    { "name": "forearm bones",   "parts": ["radius", "ulna"] },
+    { "name": "lower leg bones", "parts": ["tibia", "fibula"] }
+  ]
+}

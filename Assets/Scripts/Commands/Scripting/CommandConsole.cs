@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -220,28 +221,42 @@ namespace Assets.Scripts.Scripting
         }
 
         // ------------------------------------------------------------------
-        // Tab completion -- completes the segment after the last ";" against verbs, macro names, and the
-        // arguments verbs commonly take. Part names join this list with the part resolver.
+        // Tab completion -- completes the segment after the last ";" against verbs and macro names, or,
+        // after a part-naming verb, the last part name against the model's names, aliases and systems.
         // ------------------------------------------------------------------
+
+        // A part-naming verb followed by a (partial) list of parts: completes the last part name.
+        private static readonly Regex PartArgument = new Regex(
+            @"^((?:show|select|add|also|isolate|hide|remove|focus|label(?: on| off)?)\s+(?:.*,\s*)?)(.*)$", RegexOptions.IgnoreCase);
 
         private void Complete()
         {
             string text = input.text;
             int segmentStart = text.LastIndexOf(';') + 1;
-            string leading = text.Substring(0, segmentStart);
+            string leading = text.Substring(0, segmentStart) + (segmentStart > 0 ? " " : "");
             string segment = text.Substring(segmentStart).TrimStart();
-            string typed = segment.ToLowerInvariant();
 
-            var matches = CompletionCandidates().Where(c => c.StartsWith(typed)).Distinct().OrderBy(c => c).ToList();
+            string fixedPart = "";
+            string typed = segment.ToLowerInvariant();
+            IEnumerable<string> candidates = CompletionCandidates();
+
+            var partArgument = PartArgument.Match(segment);
+            if (partArgument.Success && PartResolver.IsReady)
+            {
+                fixedPart = partArgument.Groups[1].Value;
+                typed = partArgument.Groups[2].Value.ToLowerInvariant();
+                candidates = PartResolver.Names.Select(n => n.ToLowerInvariant()).Concat(BodySystems.Names);
+            }
+
+            var matches = candidates.Where(c => c.StartsWith(typed)).Distinct().OrderBy(c => c.Length).ThenBy(c => c).ToList();
             if (matches.Count == 0)
                 return;
 
-            string completion = matches.Count == 1 ? matches[0] + " " : CommonPrefix(matches);
+            string completion = matches.Count == 1 ? matches[0] + (fixedPart.Length > 0 ? "" : " ") : CommonPrefix(matches);
             if (matches.Count > 1)
-                CommandLog.Info(string.Join("   ", matches.Take(24)) + (matches.Count > 24 ? "   ..." : ""));
+                CommandLog.Info(string.Join("   ", matches.Take(24)) + (matches.Count > 24 ? $"   ... ({matches.Count})" : ""));
 
-            string spacer = segmentStart > 0 ? " " : "";
-            input.text = leading + spacer + completion;
+            input.text = leading + fixedPart + completion;
             caretToEndNextFrame = true;
         }
 
