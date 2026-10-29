@@ -1,9 +1,7 @@
-using Assets.Scripts.Commands;
+using Assets.Scripts.Scripting;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -19,10 +17,9 @@ namespace Assets.Scripts.Voice
     /// This class is now just the four pipeline stages wired together, each independently
     /// testable/swappable:
     /// capture (push-to-talk timing + <see cref="VoiceProcessor"/>, unchanged) -> transcribe
-    /// (<see cref="IAsrBackend"/>, the Whisper sidecar configured by <see cref="AsrConfig"/>) -> normalize +
-    /// match (<see cref="TranscriptNormalizer"/> + <see cref="VoiceCommandMatcher"/>, pure text
-    /// in/labels out, no scene dependency) -> execute (<see cref="VoiceCommandMatcher.Execute"/>
-    /// against the <see cref="VoiceCommandActions"/> built in <see cref="BuildActions"/>).
+    /// (<see cref="IAsrBackend"/>, the Whisper sidecar configured by <see cref="AsrConfig"/>) -> interpret
+    /// (<see cref="VoiceInterpreter"/>: normalize + match into command text, no scene dependency) ->
+    /// execute (<see cref="CommandRunner"/>, the same runner typed commands and macros use).
     /// </summary>
     [RequireComponent(typeof(VoiceProcessor))]
     public class VoiceCommands : MonoBehaviour
@@ -39,20 +36,17 @@ namespace Assets.Scripts.Voice
         private VoiceProcessor voiceProcessor;
         private AsrConfig config;
         private IAsrBackend asrBackend;
-        private VoiceCommandMatcher matcher;
 
         private bool voiceReady;
         private bool listening;
         private bool capturing;
         private Coroutine stoppingCoroutine;
         private int captureSampleRate = 16000;
-        private List<GameObject> lastShownObjects;
 
         private void Awake()
         {
             voiceProcessor = GetComponent<VoiceProcessor>();
             config = AsrConfig.Load(Path.Combine(Application.streamingAssetsPath, "asr_config.json"));
-            matcher = new VoiceCommandMatcher(BuildActions()) { FuzzyMatchingEnabled = config.FuzzyMatchingEnabled };
             StartCoroutine(InitAsr());
         }
 
@@ -76,7 +70,7 @@ namespace Assets.Scripts.Voice
             // Export the vocabulary this matcher just built, so the Whisper sidecar's
             // initial_prompt is generated from the same single source of truth as the matcher
             // rather than a hand-maintained duplicate.
-            matcher.ExportVocabulary(Path.Combine(Application.streamingAssetsPath, "asr_vocabulary.json"));
+            VoiceInterpreter.Matcher.ExportVocabulary(Path.Combine(Application.streamingAssetsPath, "asr_vocabulary.json"));
 
             var whisper = new WhisperAsrBackend(config.WhisperBaseUrl, config.WhisperTimeoutSeconds,
                 config.AutoStartSidecar ? config.SidecarDirectory : null, config.SidecarStartupTimeoutSeconds);
@@ -133,8 +127,10 @@ namespace Assets.Scripts.Voice
             // separate press/release edges, so releasing one while the other is still held
             // (e.g. tapping the mouse button mid-sentence while holding the key) doesn't cut
             // listening off early.
+            // The key is ignored while a text field (e.g. the command console) has focus, so
+            // typing a "v" doesn't start listening; the mouse trigger still works.
             bool triggerHeld = false;
-            if (Keyboard.current != null)
+            if (Keyboard.current != null && !Shortcuts.UserIsWriting())
                 triggerHeld |= Keyboard.current[triggerKey].isPressed;
             if (Mouse.current != null)
                 triggerHeld |= Mouse.current.middleButton.isPressed;
@@ -203,35 +199,18 @@ namespace Assets.Scripts.Voice
 
             // The raw transcript is the durable record -- log it unaltered, including its
             // original punctuation and casing, before anything derives from it.
-            string rawTranscript = asrResult.Text ?? "";
-            Debug.Log($"[VoiceCommands] Raw transcript: \"{rawTranscript}\"");
-
-            string normalized = TranscriptNormalizer.Normalize(rawTranscript);
-            Debug.Log($"[VoiceCommands] Normalized: \"{normalized}\"");
-
-            var matches = matcher.Match(normalized);
-            if (matches.Count == 0)
+            // The interpreter logs raw -> normalized -> command itself, to both the Unity log
+            // and the command console.
+            string commandText = VoiceInterpreter.Interpret(asrResult.Text ?? "");
+            if (commandText != null)
             {
-                Debug.Log("[VoiceCommands] No command matched.");
-            }
-            else
-            {
-                Debug.Log("[VoiceCommands] Resolved command(s): " +
-                    string.Join(" | ", matches.Select(m => m.Param.HasValue ? $"{m.CommandLabel} ({m.Param})" : m.CommandLabel)));
-                StartCoroutine(ExecuteMatches(matches));
+                if (CommandRunner.Instance != null)
+                    CommandRunner.Instance.Submit(commandText, CommandSource.Voice);
+                else
+                    Debug.LogWarning("[VoiceCommands] No CommandRunner in the scene -- voice command not run.");
             }
 
             stoppingCoroutine = null;
-        }
-
-        private IEnumerator ExecuteMatches(List<VoiceCommandMatcher.MatchResult> matches)
-        {
-            for (int i = 0; i < matches.Count; i++)
-            {
-                matcher.Execute(matches[i]);
-                if (i < matches.Count - 1)
-                    yield return new WaitForSeconds(0.4f);
-            }
         }
 
         private IEnumerator FlashIndicatorBriefly()
@@ -253,163 +232,6 @@ namespace Assets.Scripts.Voice
             if (voiceProcessor != null)
                 voiceProcessor.OnFrameCaptured -= OnFrameCaptured;
             asrBackend?.Shutdown();
-        }
-
-        // ------------------------------------------------------------------
-        // Dispatch -- wires the matcher's fixed set of command labels to the app's existing
-        // show/hide/reset functions. Add or rename presenter phrases in VoiceCommandMatcher,
-        // not here; this only needs updating if a label there is renamed.
-        // ------------------------------------------------------------------
-
-        private VoiceCommandActions BuildActions()
-        {
-            return new VoiceCommandActions
-            {
-                RemoveSlice = () => CrossSections.Instance.VoiceRemoveSlice(),
-                Clear = VoiceClear,
-                ResetView = () => CameraController.instance.ResetCamera(),
-                ResetAll = ResetAll,
-
-                ShowMuscles = () => ShowParts(GlobalVariables.Instance.muscles),
-                HideMuscles = () => HideParts(GlobalVariables.Instance.muscles),
-                ShowSkeleton = () => ShowParts(GlobalVariables.Instance.bones),
-                HideSkeleton = () => HideParts(GlobalVariables.Instance.bones),
-                ShowNerves = () => ShowParts(GlobalVariables.Instance.nerves),
-                HideNerves = () => HideParts(GlobalVariables.Instance.nerves),
-                ShowOrgans = () => ShowParts(GlobalVariables.Instance.viscera),
-                HideOrgans = () => HideParts(GlobalVariables.Instance.viscera),
-                ShowBloodVessels = () => ShowParts(GlobalVariables.Instance.arteries.Concat(GlobalVariables.Instance.veins).ToList()),
-                HideBloodVessels = () => HideParts(GlobalVariables.Instance.arteries.Concat(GlobalVariables.Instance.veins).ToList()),
-                ShowLymph = () => ShowParts(GlobalVariables.Instance.lymphs),
-                HideLymph = () => HideParts(GlobalVariables.Instance.lymphs),
-                ShowJoints = () => ShowParts(GlobalVariables.Instance.joints),
-                HideJoints = () => HideParts(GlobalVariables.Instance.joints),
-
-                ShowHeart = () => ShowStructure("heart"),
-                ShowBrain = () => ShowStructure("brain"),
-                ShowLungs = () => ShowStructure("lungs"),
-                ShowLiver = () => ShowStructure("liver"),
-                ShowStomach = () => ShowStructure("stomach"),
-
-                FocusOnLastShown = FocusOnLastShown,
-                ResetOrientation = () => CameraController.instance.ResetOrientation(),
-                PanUp = () => CameraController.instance.PanByPercent(15),
-                PanDown = () => CameraController.instance.PanByPercent(-15),
-
-                ZoomInByPercent = value => CameraController.instance.ZoomByPercent(-value),
-                ZoomOutByPercent = value => CameraController.instance.ZoomByPercent(value),
-                ZoomOut = ZoomOut,
-
-                RotateByDegrees = value => CameraController.instance.RotateBy(value),
-                SlowRotate = () => CameraController.instance.StartAutoRotate(4f),
-                Rotate = () => CameraController.instance.StartAutoRotate(2f),
-
-                SliceToPercent = value => CrossSections.Instance.VoiceJumpTo(value),
-                SliceDeeperByPercent = value => CrossSections.Instance.VoiceStepDeeper(value),
-                SliceBack = () => CrossSections.Instance.VoiceStepBack(),
-                SlowSlice = () => CrossSections.Instance.VoiceSlowSlice(),
-                SliceOn = () => CrossSections.Instance.VoiceSliceOn(),
-
-                GestureOff = () => HandInputCoordinator.SetMode(HandInputMode.Off),
-                GestureLeap = () => HandInputCoordinator.SetMode(HandInputMode.Leap),
-                GestureVideo = () => HandInputCoordinator.SetMode(HandInputMode.Video),
-            };
-        }
-
-        /// <summary>"clear" / "clear effects" -- cancels the slice and resets orientation, but keeps the current zoom/camera distance.</summary>
-        private void VoiceClear()
-        {
-            CrossSections.Instance.VoiceRemoveSlice();
-            CameraController.instance.ResetOrientation();
-        }
-
-        private void ShowParts(List<TangibleBodyPart> parts)
-        {
-            List<GameObject> shown = new List<GameObject>();
-            foreach (var part in parts)
-            {
-                if (part.gameObject.activeInHierarchy)
-                    continue;
-                part.transform.SetActiveParentsRecursively(true);
-                shown.Add(part.gameObject);
-            }
-            ActionControl.Instance.AddCommand(new ShowCommand(shown), true);
-            Lexicon.Instance.UpdateTreeViewCheckboxes();
-
-            // lastShownObjects drives "focus" -- it must be everything belonging to
-            // this layer, not just what "shown" tracked (objects already visible
-            // before this command are deliberately left out of "shown", since that
-            // list is also used for undo history; but "focus" needs the full set,
-            // otherwise it has nothing reliable to select and falls back to framing
-            // everything currently on screen).
-            lastShownObjects = parts.Select(p => p.gameObject).ToList();
-        }
-
-        private void HideParts(List<TangibleBodyPart> parts)
-        {
-            List<GameObject> hidden = parts.Where(it => it.gameObject.activeInHierarchy).Select(it => it.gameObject).ToList();
-            ActionControl.Instance.AddCommand(new DeleteCommand(hidden), true);
-        }
-
-        private void ShowStructure(string name)
-        {
-            Transform found = GlobalVariables.Instance.globalParent.transform.RecursiveFindChild(name);
-            if (found == null)
-            {
-                Debug.LogWarning($"[VoiceCommands] Could not find a structure named '{name}'.");
-                return;
-            }
-
-            List<GameObject> shown = new List<GameObject>();
-            found.SetActiveParentsRecursively(true, shown);
-            found.SetActiveRecursively(true, shown);
-
-            ActionControl.Instance.AddCommand(new ShowCommand(shown), false);
-            SelectedObjectsManagement.Instance.GetActiveObjects();
-            Lexicon.Instance.UpdateTreeViewCheckboxes();
-
-            // lastShownObjects drives "focus" -- use everything under the found
-            // structure, not just "shown" (objects already visible before this
-            // command, e.g. because an overlapping layer was already on, are left
-            // out of "shown" since that list also feeds the undo command; "focus"
-            // needs the complete structure or it has nothing reliable to select).
-            // Falls back to the found node itself if it has no TangibleBodyPart
-            // descendants, so this is never left empty.
-            var structureObjects = found.GetComponentsInChildren<TangibleBodyPart>(true)
-                .Select(t => t.gameObject)
-                .ToList();
-            if (structureObjects.Count == 0)
-                structureObjects.Add(found.gameObject);
-            lastShownObjects = structureObjects;
-        }
-
-        private void FocusOnLastShown()
-        {
-            if (lastShownObjects == null || lastShownObjects.Count == 0)
-            {
-                Debug.LogWarning("[VoiceCommands] Nothing to focus on yet -- show a structure first.");
-                return;
-            }
-
-            SelectedObjectsManagement.Instance.DeselectAllObjects();
-            foreach (var obj in lastShownObjects)
-            {
-                if (obj != null)
-                    SelectedObjectsManagement.Instance.SelectObject(obj);
-            }
-            CameraController.instance.CenterView(true);
-        }
-
-        private void ZoomOut()
-        {
-            SelectedObjectsManagement.Instance.DeselectAllObjects();
-            CameraController.instance.CenterView(true);
-        }
-
-        private void ResetAll()
-        {
-            ActionControl.Instance.ResetAll();
-            lastShownObjects = null;
         }
     }
 }

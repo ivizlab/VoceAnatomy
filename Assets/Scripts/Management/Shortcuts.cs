@@ -443,8 +443,8 @@ public class Shortcuts : MonoBehaviour
             layer++;
     }
 
-    private bool UserIsWriting()
+    public static bool UserIsWriting()
     {
-        return EventSystem.current.currentSelectedGameObject != null && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null && !ActionControl.blockedInput;
+        return EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null &&EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null && !ActionControl.blockedInput;
     }
 }

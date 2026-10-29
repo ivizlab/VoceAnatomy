@@ -414,7 +414,10 @@ public class CrossSections : MonoBehaviour
 
     private IEnumerator autoSliceCoroutine;
 
-    private void StopAutoSlice()
+    /// <summary>True while "slow slice" is sweeping; commands yield on this to wait for it.</summary>
+    public bool IsAutoSlicing => autoSliceCoroutine != null;
+
+    public void StopAutoSlice()
     {
         if (autoSliceCoroutine != null)
         {

@@ -8,20 +8,12 @@ using UnityEngine;
 namespace Assets.Scripts.Voice
 {
     /// <summary>
-    /// Decides what command a (normalized) transcript refers to. Deliberately separated from
-    /// executing that command: <see cref="Match"/> takes a string and returns which rule(s)
-    /// matched (by stable <see cref="MatchResult.CommandLabel"/> plus any numeric parameter) --
-    /// it never invokes anything, so it's testable by feeding it text with no microphone and no
-    /// Unity scene. <see cref="Execute"/> is the separate step that actually invokes a matched
-    /// rule's action, looked up by that same label.
-    ///
-    /// This split also keeps the door open for a future step (not implemented here): a small
-    /// local LLM sitting between the normalized transcript and this class, interpreting looser
-    /// phrasing into the same (label, param) shape and calling the same <see cref="Execute"/> --
-    /// swapping in that interpreter would only ever touch what runs *before* Execute, never
-    /// Execute itself or anything downstream of it. <see cref="AllCommandLabels"/> exists for
-    /// that future interpreter's use (e.g. as the fixed set of commands it can target); it's not
-    /// consumed by anything today.
+    /// Decides what command a (normalized) transcript refers to. <see cref="Match"/> takes a string
+    /// and returns which rule(s) matched (by stable <see cref="MatchResult.CommandLabel"/> plus any
+    /// numeric parameter) -- it never invokes anything, so it's testable by feeding it text with no
+    /// microphone and no Unity scene. <see cref="VoiceInterpreter"/> maps each label onto command
+    /// text that <see cref="Assets.Scripts.Scripting.CommandRunner"/> runs, the same path typed
+    /// commands and macros take.
     ///
     /// The rule table here is also the single source of truth for the app's voice vocabulary --
     /// every word/phrase a rule can trigger on is collected automatically as rules are built
@@ -31,8 +23,7 @@ namespace Assets.Scripts.Voice
     public class VoiceCommandMatcher
     {
         /// <summary>Result of matching one command segment -- a label identifying which rule
-        /// fired, and its numeric parameter if the rule takes one. Never carries a delegate;
-        /// look the label up via <see cref="Execute"/> to actually run it.</summary>
+        /// fired, and its numeric parameter if the rule takes one.</summary>
         public struct MatchResult
         {
             public string CommandLabel;
@@ -49,11 +40,10 @@ namespace Assets.Scripts.Voice
             // with a slice/zoom/rotate percentage command just because a mis-heard
             // word happens to also satisfy their word groups.
             public bool SkipIfNumberHeard;
-            // Exactly one of these is set. ParamAction rules also require a number
-            // (digit or spelled out, e.g. "twenty") somewhere in the transcript; if
-            // none is found, the rule is skipped rather than treated as a match.
-            public Action Action;
-            public Action<int> ParamAction;
+            // Numeric rules require a number (digit or spelled out, e.g. "twenty")
+            // somewhere in the transcript; if none is found, the rule is skipped
+            // rather than treated as a match.
+            public bool TakesNumber;
         }
 
         /// <summary>Fuzzy (edit-distance) matching on longer words can be toggled off to compare
@@ -70,14 +60,14 @@ namespace Assets.Scripts.Voice
         public IReadOnlyList<string> GrammarPhrases => grammarPhrases;
         public IEnumerable<string> AllCommandLabels => rules.Select(r => r.Label).Distinct();
 
-        public VoiceCommandMatcher(VoiceCommandActions actions)
+        public VoiceCommandMatcher()
         {
-            BuildVocabulary(actions);
+            BuildVocabulary();
         }
 
         /// <summary>
-        /// Splits a normalized transcript on "and"/"then" (capped at 3 segments, same as
-        /// before) and matches each segment independently, in order. Returns one MatchResult per
+        /// Splits a normalized transcript on "and"/"then" and matches each segment
+        /// independently, in order. Returns one MatchResult per
         /// segment that matched something; segments that matched nothing are silently skipped
         /// (same behavior as today -- a filler-only segment just doesn't fire anything).
         /// </summary>
@@ -90,7 +80,6 @@ namespace Assets.Scripts.Voice
             string[] segments = Regex.Split(normalizedTranscript, @"\band\b|\bthen\b", RegexOptions.IgnoreCase)
                 .Select(s => s.Trim())
                 .Where(s => s.Length > 0)
-                .Take(3)
                 .ToArray();
 
             foreach (var segment in segments)
@@ -118,7 +107,7 @@ namespace Assets.Scripts.Voice
                 if (rule.SkipIfNumberHeard && TryParseNumber(orderedWords, out _))
                     continue;
 
-                if (rule.ParamAction != null)
+                if (rule.TakesNumber)
                 {
                     if (!TryParseNumber(orderedWords, out int value))
                         continue; // trigger words matched but no number heard -- keep looking
@@ -132,23 +121,6 @@ namespace Assets.Scripts.Voice
 
             result = default;
             return false;
-        }
-
-        /// <summary>Invokes the rule identified by a match's label. The only place a
-        /// VoiceCommandRule's Action/ParamAction is ever called.</summary>
-        public void Execute(MatchResult match)
-        {
-            var rule = rules.FirstOrDefault(r => r.Label == match.CommandLabel);
-            if (rule == null)
-            {
-                Debug.LogWarning($"[VoiceCommandMatcher] No rule registered for label \"{match.CommandLabel}\".");
-                return;
-            }
-
-            if (rule.ParamAction != null && match.Param.HasValue)
-                rule.ParamAction.Invoke(match.Param.Value);
-            else
-                rule.Action?.Invoke();
         }
 
         // ------------------------------------------------------------------
@@ -266,89 +238,82 @@ namespace Assets.Scripts.Voice
         private static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
         // ------------------------------------------------------------------
-        // Vocabulary -- add or rename presenter phrases here only. Every rule calls an
-        // existing app function; none touch scene objects directly. Word groups are AND'ed;
-        // words within a group are OR'd. Every word used in a group here is also automatically
-        // added to the recognition grammar/prompt vocabulary -- nothing extra to update when
-        // adding a new command below.
+        // Vocabulary -- add or rename presenter phrases here only. A rule's label is mapped
+        // onto command text by VoiceInterpreter; a new label that isn't already the command
+        // it means needs an entry there. Word groups are AND'ed; words within a group are
+        // OR'd. Every word used in a group here is also automatically added to the
+        // recognition grammar/prompt vocabulary -- nothing extra to update when adding a new
+        // command below.
         // ------------------------------------------------------------------
 
-        private void BuildVocabulary(VoiceCommandActions a)
+        private void BuildVocabulary()
         {
             rules = new List<VoiceCommandRule>();
 
             // Reset ladder, most specific first. "remove slice"/"reset view" must be checked
             // before the bare "reset" safety net below. All skip if a number was heard: a
             // spoken number strongly signals a slice/zoom/rotate percentage command instead.
-            rules.Add(Rule("remove slice", new[] { new[] { "remove", "reset" }, new[] { "slice", "cross" } },
-                a.RemoveSlice, skipIfNumberHeard: true));
-            rules.Add(Rule("clear", new[] { new[] { "clear" } }, a.Clear, skipIfNumberHeard: true));
-            rules.Add(Rule("reset view", new[] { new[] { "reset" }, new[] { "view", "camera" } },
-                a.ResetView, skipIfNumberHeard: true));
+            rules.Add(Rule("remove slice", new[] { new[] { "remove", "reset" }, new[] { "slice", "cross" } }, skipIfNumberHeard: true));
+            rules.Add(Rule("clear", new[] { new[] { "clear" } }, skipIfNumberHeard: true));
+            rules.Add(Rule("reset view", new[] { new[] { "reset" }, new[] { "view", "camera" } }, skipIfNumberHeard: true));
 
             // Safety net: bare "reset"/"whole body"/"start over" catch anything not matched
             // above.
-            rules.Add(Rule("reset", new[] { new[] { "reset" } }, a.ResetAll, skipIfNumberHeard: true));
-            rules.Add(Rule("whole body", new[] { new[] { "whole" }, new[] { "body" } }, a.ResetAll, skipIfNumberHeard: true));
-            rules.Add(Rule("start over", new[] { new[] { "start" }, new[] { "over" } }, a.ResetAll, skipIfNumberHeard: true));
+            rules.Add(Rule("reset", new[] { new[] { "reset" } }, skipIfNumberHeard: true));
+            rules.Add(Rule("whole body", new[] { new[] { "whole" }, new[] { "body" } }, skipIfNumberHeard: true));
+            rules.Add(Rule("start over", new[] { new[] { "start" }, new[] { "over" } }, skipIfNumberHeard: true));
 
-            AddLayerRule("muscles", new[] { "muscle", "muscles" }, a.ShowMuscles, a.HideMuscles);
-            AddLayerRule("skeleton", new[] { "skeleton", "bone", "bones" }, a.ShowSkeleton, a.HideSkeleton);
-            AddLayerRule("nerves", new[] { "nerve", "nerves" }, a.ShowNerves, a.HideNerves);
-            AddLayerRule("organs", new[] { "organ", "organs" }, a.ShowOrgans, a.HideOrgans);
-            AddLayerRule("blood vessels", new[] { "vessel", "vessels", "artery", "arteries", "vein", "veins" },
-                a.ShowBloodVessels, a.HideBloodVessels);
-            AddLayerRule("lymph", new[] { "lymph", "lymphatic", "lymphatics" }, a.ShowLymph, a.HideLymph);
-            AddLayerRule("joints", new[] { "joint", "joints" }, a.ShowJoints, a.HideJoints);
+            AddLayerRule("muscles", new[] { "muscle", "muscles" });
+            AddLayerRule("skeleton", new[] { "skeleton", "bone", "bones" });
+            AddLayerRule("nerves", new[] { "nerve", "nerves" });
+            AddLayerRule("organs", new[] { "organ", "organs" });
+            AddLayerRule("blood vessels", new[] { "vessel", "vessels", "artery", "arteries", "vein", "veins" });
+            AddLayerRule("lymph", new[] { "lymph", "lymphatic", "lymphatics" });
+            AddLayerRule("joints", new[] { "joint", "joints" });
 
-            AddHeroOrganRule("heart", a.ShowHeart, "heart");
-            AddHeroOrganRule("brain", a.ShowBrain, "brain");
-            AddHeroOrganRule("lungs", a.ShowLungs, "lung", "lungs");
-            AddHeroOrganRule("liver", a.ShowLiver, "liver");
-            AddHeroOrganRule("stomach", a.ShowStomach, "stomach");
+            AddHeroOrganRule("heart", "heart");
+            AddHeroOrganRule("brain", "brain");
+            AddHeroOrganRule("lungs", "lung", "lungs");
+            AddHeroOrganRule("liver", "liver");
+            AddHeroOrganRule("stomach", "stomach");
 
-            rules.Add(Rule("focus", new[] { new[] { "focus" } }, a.FocusOnLastShown));
-            rules.Add(Rule("front", new[] { new[] { "front" } }, a.ResetOrientation));
-            rules.Add(Rule("pan up", new[] { new[] { "pan" }, new[] { "up" } }, a.PanUp));
-            rules.Add(Rule("pan down", new[] { new[] { "pan" }, new[] { "down" } }, a.PanDown));
+            rules.Add(Rule("focus", new[] { new[] { "focus" } }));
+            rules.Add(Rule("front", new[] { new[] { "front" } }));
+            rules.Add(Rule("pan up", new[] { new[] { "pan" }, new[] { "up" } }));
+            rules.Add(Rule("pan down", new[] { new[] { "pan" }, new[] { "down" } }));
 
             // Numbered zoom rules are checked first: if "zoom in/out" is heard with a number, it
             // wins; if the same trigger words are heard with no number, matching falls through
             // to the plain rules below.
             rules.Add(ParamRule("zoom in by percent", new[] { new[] { "zoom" }, new[] { "in" } },
-                a.ZoomInByPercent,
                 examplePhrases: new[] { "zoom in ten percent", "zoom in fifty percent" }));
             rules.Add(ParamRule("zoom out by percent", new[] { new[] { "zoom" }, new[] { "out" } },
-                a.ZoomOutByPercent,
                 examplePhrases: new[] { "zoom out ten percent", "zoom out fifty percent" }));
-            rules.Add(Rule("zoom in", new[] { new[] { "zoom" }, new[] { "in" } }, a.FocusOnLastShown));
-            rules.Add(Rule("zoom out", new[] { new[] { "zoom" }, new[] { "out" } }, a.ZoomOut));
+            rules.Add(Rule("zoom in", new[] { new[] { "zoom" }, new[] { "in" } }));
+            rules.Add(Rule("zoom out", new[] { new[] { "zoom" }, new[] { "out" } }));
 
             rules.Add(ParamRule("rotate by degrees", new[] { new[] { "rotate", "turn", "spin" } },
-                a.RotateByDegrees,
                 examplePhrases: new[] { "rotate by twenty degrees", "rotate by ninety degrees", "turn by forty five degrees", "spin by thirty degrees" }));
 
             // "slow rotate" must be checked before the plain "rotate" rule.
-            rules.Add(Rule("slow rotate", new[] { new[] { "slow" }, new[] { "rotate", "turn", "spin" } }, a.SlowRotate));
-            rules.Add(Rule("rotate", new[] { new[] { "rotate", "turn", "spin" } }, a.Rotate));
+            rules.Add(Rule("slow rotate", new[] { new[] { "slow" }, new[] { "rotate", "turn", "spin" } }));
+            rules.Add(Rule("rotate", new[] { new[] { "rotate", "turn", "spin" } }));
 
             // Cross-section (front-to-back slice). 0% = front, 100% = back. "slice at N"
             // (absolute) is checked before plain "slice N" (relative).
             rules.Add(ParamRule("slice to percent", new[] { new[] { "slice", "cross" }, new[] { "at" } },
-                a.SliceToPercent,
                 examplePhrases: new[] { "slice at forty percent", "slice at ten percent", "cross at seventy percent" }));
             rules.Add(ParamRule("slice deeper by percent", new[] { new[] { "slice", "cross" } },
-                a.SliceDeeperByPercent,
                 examplePhrases: new[] { "slice twenty percent", "slice ten percent", "cross twenty percent" }));
-            rules.Add(Rule("slice back", new[] { new[] { "slice", "cross" }, new[] { "back" } }, a.SliceBack));
-            rules.Add(Rule("slow slice", new[] { new[] { "slow" }, new[] { "slice", "cross" } }, a.SlowSlice));
-            rules.Add(Rule("slice on", new[] { new[] { "slice", "cross" } }, a.SliceOn));
+            rules.Add(Rule("slice back", new[] { new[] { "slice", "cross" }, new[] { "back" } }));
+            rules.Add(Rule("slow slice", new[] { new[] { "slow" }, new[] { "slice", "cross" } }));
+            rules.Add(Rule("slice on", new[] { new[] { "slice", "cross" } }));
 
             // Hand-tracking backend switch -- voice-triggered, calls into HandInputCoordinator
             // (not the Leap/gesture code itself).
-            rules.Add(Rule("gesture off", new[] { new[] { "gesture", "gestures" }, new[] { "off", "disable" } }, a.GestureOff));
-            rules.Add(Rule("gesture leap", new[] { new[] { "gesture", "gestures" }, new[] { "leap" } }, a.GestureLeap));
-            rules.Add(Rule("gesture video", new[] { new[] { "gesture", "gestures" }, new[] { "video", "camera" } }, a.GestureVideo));
+            rules.Add(Rule("gesture off", new[] { new[] { "gesture", "gestures" }, new[] { "off", "disable" } }));
+            rules.Add(Rule("gesture leap", new[] { new[] { "gesture", "gestures" }, new[] { "leap" } }));
+            rules.Add(Rule("gesture video", new[] { new[] { "gesture", "gestures" }, new[] { "video", "camera" } }));
 
             // Words that don't belong to any single rule's RequiredWordGroups but the
             // recognizer/prompt still needs to know about: spelled-out numbers, and the
@@ -362,29 +327,29 @@ namespace Assets.Scripts.Voice
             grammarWords.Add("then");
         }
 
-        private void AddLayerRule(string label, string[] subjectWords, Action show, Action hide)
+        private void AddLayerRule(string label, string[] subjectWords)
         {
-            rules.Add(Rule("show " + label, new[] { new[] { "show", "add" }, subjectWords }, show));
-            rules.Add(Rule("remove " + label, new[] { new[] { "remove", "hide" }, subjectWords }, hide));
+            rules.Add(Rule("show " + label, new[] { new[] { "show", "add" }, subjectWords }));
+            rules.Add(Rule("remove " + label, new[] { new[] { "remove", "hide" }, subjectWords }));
         }
 
-        private void AddHeroOrganRule(string label, Action show, params string[] subjectWords)
+        private void AddHeroOrganRule(string label, params string[] subjectWords)
         {
-            rules.Add(Rule("show " + label, new[] { new[] { "show", "add" }, subjectWords }, show));
+            rules.Add(Rule("show " + label, new[] { new[] { "show", "add" }, subjectWords }));
         }
 
-        private VoiceCommandRule Rule(string label, string[][] groups, Action action, bool skipIfNumberHeard = false)
+        private VoiceCommandRule Rule(string label, string[][] groups, bool skipIfNumberHeard = false)
         {
             RegisterGrammarWords(groups);
-            return new VoiceCommandRule { Label = label, RequiredWordGroups = groups, Action = action, SkipIfNumberHeard = skipIfNumberHeard };
+            return new VoiceCommandRule { Label = label, RequiredWordGroups = groups, SkipIfNumberHeard = skipIfNumberHeard };
         }
 
-        private VoiceCommandRule ParamRule(string label, string[][] groups, Action<int> action, string[] examplePhrases = null)
+        private VoiceCommandRule ParamRule(string label, string[][] groups, string[] examplePhrases = null)
         {
             RegisterGrammarWords(groups);
             if (examplePhrases != null)
                 grammarPhrases.AddRange(examplePhrases);
-            return new VoiceCommandRule { Label = label, RequiredWordGroups = groups, ParamAction = action };
+            return new VoiceCommandRule { Label = label, RequiredWordGroups = groups, TakesNumber = true };
         }
 
         private void RegisterGrammarWords(string[][] groups)

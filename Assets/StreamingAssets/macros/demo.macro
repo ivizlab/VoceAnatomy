@@ -1,0 +1,9 @@
+# demo.macro -- run with "run demo" (or just "demo") in the console.
+# One command per line; # starts a comment. Each line waits for the previous one to finish.
+reset
+show heart; focus
+wait 3
+rotate slow
+slice at 40
+wait 4
+zoom out

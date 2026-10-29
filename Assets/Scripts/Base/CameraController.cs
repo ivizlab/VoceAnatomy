@@ -373,14 +373,61 @@ public class CameraController : MonoBehaviour
     }
 
     /// <summary>
+    /// Horizontal counterpart of <see cref="PanByPercent"/>, along the camera's local right
+    /// direction. Used for "pan left/right".
+    /// </summary>
+    /// <param name="percent">Signed percent of the current distance to pan; negative pans left.</param>
+    public void PanHorizontalByPercent(float percent)
+    {
+        Vector3 delta = trans.right * (distance * percent / 100f);
+        cameraCenter.Translate(delta, Space.World);
+        trans.Translate(delta, Space.World);
+    }
+
+    /// <summary>
+    /// True while any camera animation (zoom/focus lerp, auto-rotate, rotate-by, view
+    /// change) is running. Commands yield on this so a sequence waits for the camera to
+    /// settle before its next step.
+    /// </summary>
+    public bool IsAnimating => lerping || autoRotating || onRotateCoroutine;
+
+    /// <summary>
+    /// Cancels any running zoom/pan lerp or auto-rotation where it is, for the "stop"
+    /// command and for interrupting a running macro.
+    /// </summary>
+    public void StopAnimations()
+    {
+        if (autoRotateCoroutine != null)
+            StopCoroutine(autoRotateCoroutine);
+        if (lerpPosCoroutine != null)
+            StopCoroutine(lerpPosCoroutine);
+        if (lerpPosHorizontalCoroutine != null)
+            StopCoroutine(lerpPosHorizontalCoroutine);
+        autoRotateCoroutine = null;
+        autoRotating = false;
+        lerping = false;
+    }
+
+    /// <summary>
     /// Resets the camera's orientation to the default front-facing view without
     /// changing zoom/distance or pan position. Used for the "front"/"face front"
     /// voice command and the orientation part of "clear".
     /// </summary>
     public void ResetOrientation()
     {
-        x = 0;
-        y = 0;
+        SetOrientation(0, 0);
+    }
+
+    /// <summary>
+    /// Snaps the camera to a fixed orientation around the current centre, keeping zoom and
+    /// pan -- the general form of <see cref="ResetOrientation"/>, used for "view back/left/top" etc.
+    /// </summary>
+    /// <param name="pitch">Degrees up/down; 90 looks straight down from above.</param>
+    /// <param name="yaw">Degrees around the vertical axis; 180 looks from behind.</param>
+    public void SetOrientation(float pitch, float yaw)
+    {
+        x = yaw;
+        y = pitch;
         z = 0;
         UpdatePosition();
     }
