@@ -34,6 +34,34 @@ namespace Assets.Scripts.Scripting
             return Files().FirstOrDefault(path => ToKey(Path.GetFileNameWithoutExtension(path)) == key);
         }
 
+        /// <summary>The slot a template macro fills with the part it's called with.</summary>
+        public const string PartSlot = "{part}";
+
+        /// <summary>A macro containing {part} is a template: "explain aorta" runs explain.macro with
+        /// {part} = aorta, so experts can add their own verbs without code.</summary>
+        public static bool IsTemplate(string name) => TryRead(name, out string text, out _) && text.Contains(PartSlot);
+
+        /// <summary>Splits "explain left ventricle" into a macro name and its argument, preferring the
+        /// longest macro name that starts the text (on a word boundary).</summary>
+        public static bool TryMatch(string text, out string name, out string argument)
+        {
+            string key = ToKey(text);
+            name = Names.Where(n => key == n || key.StartsWith(n + " ")).OrderByDescending(n => n.Length).FirstOrDefault();
+            if (name == null)
+            {
+                argument = null;
+                return false;
+            }
+            // The argument keeps its original text (quotes, casing); skip as many words as the name has.
+            int nameWords = name.Split(' ').Length;
+            var words = text.Trim().Split(new[] { ' ', '\t', '_' }, StringSplitOptions.RemoveEmptyEntries);
+            argument = string.Join(" ", words.Skip(nameWords)).Trim();
+            return true;
+        }
+
+        /// <summary>Macro text with {part} filled in.</summary>
+        public static string Expand(string text, string part) => string.IsNullOrEmpty(part) ? text : text.Replace(PartSlot, part);
+
         public static bool TryRead(string name, out string text, out string path)
         {
             text = null;

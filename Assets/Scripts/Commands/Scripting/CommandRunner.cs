@@ -47,6 +47,19 @@ namespace Assets.Scripts.Scripting
                 Instance = null;
         }
 
+        // Seconds after startup before checking every macro: part names are only fully known once the
+        // app has loaded its translations (synonyms), which happens after the scene starts.
+        private const float StartupCheckDelay = 3f;
+
+        /// <summary>Checks every macro shortly after startup, so a broken line shows up in the console
+        /// before a lesson rather than in the middle of one.</summary>
+        private IEnumerator Start()
+        {
+            yield return new WaitForSecondsRealtime(StartupCheckDelay);
+            if (PartResolver.IsReady)
+                MacroCheck.CheckAll(reportClean: false);
+        }
+
         /// <summary>Parses and runs text from a live source (console or voice). Parse errors are logged and
         /// those lines skipped; the rest still runs.</summary>
         public void Submit(string text, CommandSource source)
@@ -67,6 +80,7 @@ namespace Assets.Scripts.Scripting
                 CommandLog.Error(error.ToString());
             if (parsed.Commands.Count == 0)
                 return;
+            MacroRecorder.Capture(parsed.Commands);
 
             if (queue && IsBusy)
             {
@@ -95,6 +109,9 @@ namespace Assets.Scripts.Scripting
                 CameraController.instance.StopAnimations();
             if (CrossSections.Instance != null)
                 CrossSections.Instance.StopAutoSlice();
+            // A stopped "wait click" never reaches its own cleanup.
+            PresenterInput.ReleaseAll();
+            CaptionPanel.HideWaitHintIfShown();
         }
 
         private IEnumerator RunTopLevel(List<CommandInvocation> commands, CommandSource source)

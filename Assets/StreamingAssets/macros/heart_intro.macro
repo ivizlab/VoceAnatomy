@@ -1,0 +1,19 @@
+# heart_intro.macro -- a step-through lesson. Run with "heart intro".
+# The presenter advances each step with a click on the model, or the right arrow / Page Down key.
+reset
+title "The Heart"
+isolate heart; focus
+caption "The heart has *four chambers*: two atria above, two ventricles below."
+wait click
+
+isolate heart chambers; focus
+caption "The atria receive blood; the ventricles pump it out."
+wait click
+
+show left ventricle; focus
+describe
+rotate slow
+wait click
+
+caption clear; title clear
+zoom out

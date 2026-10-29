@@ -135,6 +135,22 @@ namespace Assets.Scripts.Scripting
                     : e.Node.GetComponentsInChildren<TangibleBodyPart>(true).Where(t => !t.CompareTag("Insertions")).Select(t => t.gameObject))
                 .Distinct().ToList();
 
+        private static List<PartEntry> lastNamed;
+        private static List<GameObject> lastNamedSelection;
+
+        /// <summary>What the selection "is" by name: the entries a command last named, as long as the
+        /// selection hasn't changed since (a named group selects its children, so "show heart; describe"
+        /// must describe the heart, not its first chamber); otherwise the selected objects themselves.</summary>
+        public static List<PartEntry> NamedSelection()
+        {
+            if (lastNamed != null && lastNamedSelection.SequenceEqual(Selection.selectedObjects))
+                return lastNamed;
+            return Selection.selectedObjects
+                .Where(o => o != null && o.GetComponent<NameAndDescription>() != null)
+                .Select(o => new PartEntry { Name = o.name, Node = o, IsLabel = o.IsLabel() })
+                .ToList();
+        }
+
         public static List<GameObject> SelectedLeaves() => Selection.selectedObjects
             .Select(o => o.IsLabel() ? o.GetComponent<Label>().parent.gameObject : o)
             .Where(o => o.IsBodyPart()).Distinct().ToList();
@@ -198,6 +214,9 @@ namespace Assets.Scripts.Scripting
             Selection.selectedObjects = Selection.selectedObjects.Distinct().ToList();
             ActionControl.Instance.AddCommand(new SelectCommand(Selection.selectedObjects), false);
             AfterChange();
+
+            lastNamed = additive && lastNamed != null ? lastNamed.Concat(entries).Distinct().ToList() : entries;
+            lastNamedSelection = new List<GameObject>(Selection.selectedObjects);
 
             // One named thing: fill the description panel and hierarchy bar, as clicking it would.
             var nodes = entries.Select(e => e.Node).Distinct().ToList();

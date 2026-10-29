@@ -60,6 +60,7 @@ namespace Assets.Scripts.Scripting
             }
             else
             {
+                CaptionPanel.ClearIfShown();
                 ActionControl.Instance.ResetAll();
             }
             yield break;

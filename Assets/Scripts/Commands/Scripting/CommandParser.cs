@@ -124,9 +124,10 @@ namespace Assets.Scripts.Scripting
             {
                 invocation = new CommandInvocation { Command = command, Verb = command.Info.Verb, Args = text.Substring(wordEnds[verbWords - 1]).Trim() };
             }
-            else if (MacroLibrary.Exists(text) && CommandRegistry.Find("run") is AnatomyCommand run)
+            else if (MacroLibrary.TryMatch(text, out _, out _) && CommandRegistry.Find("run") is AnatomyCommand run)
             {
-                // A macro's own name runs it: "heart tour" == "run heart tour".
+                // A macro's own name runs it: "heart tour" == "run heart tour", and a template macro is
+                // called like a verb: "explain aorta" == "run explain aorta".
                 invocation = new CommandInvocation { Command = run, Verb = run.Info.Verb, Args = text };
             }
             else

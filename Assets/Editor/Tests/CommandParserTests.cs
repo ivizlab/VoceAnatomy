@@ -94,6 +94,48 @@ public class CommandParserTests
     }
 
     [Test]
+    public void CaptionTakesQuotedTextAndOptionalSeconds()
+    {
+        var commands = CommandParser.Parse("caption 5 \"The aorta carries blood; then it branches.\"\ncaption clear").Commands;
+        Assert.AreEqual(2, commands.Count);
+        CollectionAssert.AreEqual(new[] { "The aorta carries blood; then it branches." }, commands[0].Quoted);
+        Assert.IsTrue(commands[1].Has("clear"));
+        Assert.AreEqual(1, CommandParser.Parse("caption").Errors.Count);
+    }
+
+    [Test]
+    public void WaitAcceptsSecondsClickOrKey()
+    {
+        Assert.AreEqual(3, CommandParser.Parse("wait 2; wait click; wait key").Commands.Count);
+        Assert.AreEqual(1, CommandParser.Parse("wait forever").Errors.Count);
+    }
+
+    [Test]
+    public void TemplateMacroIsCalledLikeAVerb()
+    {
+        // StreamingAssets/macros/explain.macro uses {part}.
+        var call = CommandParser.Parse("explain aorta").Commands.Single();
+        Assert.AreEqual("run", call.Verb);
+        Assert.AreEqual("explain aorta", call.Args);
+        StringAssert.Contains("template", CommandParser.Parse("explain").Errors.Single().Message);
+        StringAssert.Contains("doesn't take a part", CommandParser.Parse("demo heart").Errors.Single().Message);
+    }
+
+    [Test]
+    public void ShippedMacrosParseCleanly()
+    {
+        foreach (var name in MacroLibrary.Names)
+            CollectionAssert.IsEmpty(MacroCheck.Problems(name), name);
+    }
+
+    [Test]
+    public void DescriptionLeadKeepsOpeningSentencesOnly()
+    {
+        string lead = DescriptionText.Lead("\n\nAORTA\n\n\nThe aorta ( ay-OR-tə) is the largest artery. \n\nIt carries blood.\n\nA third sentence.\n\n== Structure ==\nMore.");
+        Assert.AreEqual("The aorta is the largest artery. It carries blood.", lead);
+    }
+
+    [Test]
     public void EveryVerbHasHelp()
     {
         foreach (var command in CommandRegistry.All)

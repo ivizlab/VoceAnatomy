@@ -1,0 +1,5 @@
+# explain.macro -- a template: {part} is filled with whatever follows the name,
+# so "explain aorta" or "explain left kidney" each run these steps for that part.
+isolate {part}; focus
+describe
+rotate slow
