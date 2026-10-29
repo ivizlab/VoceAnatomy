@@ -96,7 +96,29 @@ but short words (3 letters or fewer, e.g. "in"/"out") must be heard exactly.
 
 ## Hand gestures
 
+### Video (webcam) mode (say "gesture video" first)
+The standard setup -- needs nothing but a webcam. Both hands are tracked; the on-screen hand
+skeleton changes color to show which gesture is active (cyan = pointing, orange = rotating,
+magenta = moving/zooming).
+
+| Gesture | Does |
+|---|---|
+| Move your hand in front of the webcam | Moves the pointer/cursor (follows your index fingertip) |
+| Pinch thumb + index finger | Click / select -- works on both 3D body parts and UI buttons. Cursor turns green while pinching |
+| One hand, closed fist, then move | Rotates the camera (like right-mouse-drag). Open your hand to "let go" and reposition it, close it again to keep turning -- like lifting a mouse. Works even if your other, open hand is also in view |
+| Both hands in fists, moved together | Moves (pans) the camera (like middle-mouse-drag) |
+| Both hands in fists, spread apart or brought together | Zooms the camera -- spread apart to zoom in, bring together to zoom out. Pan vs. zoom is picked automatically from whichever motion is larger, so you don't need to switch between them |
+
+Tips:
+- Make a real fist (all four fingers folded in). A pinch with the other fingers curled is
+  still a pinch, because the index finger stays long in the "O" with the thumb.
+- Closing a fist never clicks: pinch is switched off during any fist gesture, and stays off
+  until thumb and index finger have separated again after you open your hand.
+- Two *open* hands in view do nothing to the camera, so you can gesture while talking.
+
 ### Leap Motion mode (say "gesture leap" first)
+Specialised option for a Leap Motion controller -- same ideas, slightly different gestures.
+
 | Gesture | Does |
 |---|---|
 | Move one hand above the controller | Moves the pointer/cursor (small square, follows your hand) |
@@ -105,16 +127,7 @@ but short words (3 letters or fewer, e.g. "in"/"out") must be heard exactly.
 | Two hands present, moved together | Pans the camera (like middle-mouse-drag) |
 | Two hands present, spread apart or brought together | Zooms the camera -- spread apart to zoom in, bring together to zoom out. The app automatically figures out whether you're panning or zooming based on which motion is larger that frame, so you don't need a separate gesture to switch between them |
 
-Camera gestures (rotate/pan/zoom) are Leap-only -- not available in Video mode.
-
-### Video (webcam) mode (say "gesture video" first)
-| Gesture | Does |
-|---|---|
-| Move your hand in front of the webcam | Moves the pointer/cursor |
-| Pinch thumb + index finger | Click / select |
-
-No camera-manipulation gestures in this mode -- use the mouse for rotate/pan/zoom, or
-switch to "gesture leap".
+Differences from Video mode: Leap pan/zoom uses two hands present (no fists needed).
 
 ### Gesture off ("gesture off")
 Hand tracking fully disabled -- mouse and keyboard only.

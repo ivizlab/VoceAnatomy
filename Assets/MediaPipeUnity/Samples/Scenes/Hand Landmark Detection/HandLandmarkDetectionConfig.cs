@@ -21,7 +21,8 @@ namespace Mediapipe.Unity.Sample.HandLandmarkDetection
 
     public Tasks.Vision.Core.RunningMode RunningMode { get; set; } = Tasks.Vision.Core.RunningMode.LIVE_STREAM;
 
-    public int NumHands { get; set; } = 1;
+    // VoceAnatomy: 2 (was 1) so GestureInputProvider can do two-hand pan/zoom.
+    public int NumHands { get; set; } = 2;
     public float MinHandDetectionConfidence { get; set; } = 0.5f;
     public float MinHandPresenceConfidence { get; set; } = 0.5f;
     public float MinTrackingConfidence { get; set; } = 0.5f;

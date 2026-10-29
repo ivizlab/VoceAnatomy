@@ -23,8 +23,8 @@ Distributed under **CC-BY-SA 4.0**, consistent with the original Z-Anatomy proje
 - **Python 3.10+** for the local speech recognizer (see step 4 below)
 - A **microphone** for voice commands
 - Optional, for hands-free pointer control (pick either):
-  - a **Leap Motion controller** with Ultraleap's current Hand Tracking software installed (from [ultraleap.com](https://www.ultraleap.com)) — supports pointing, pinch-select, and rotate/pan/zoom gestures
-  - a **webcam** (MediaPipe hand tracking) — pointing and pinch-select only
+  - a **webcam** (MediaPipe hand tracking) — the standard setup: pointing, pinch-select, fist-rotate, and two-fist pan/zoom
+  - a **Leap Motion controller** (specialised) with Ultraleap's current Hand Tracking software installed (from [ultraleap.com](https://www.ultraleap.com)) — same pointing, pinch-select, and rotate/pan/zoom gestures
 - An **internet connection** for first-time setup (Unity packages, Python packages, and the ~1.6 GB Whisper model). After setup everything runs offline — no cloud calls, no API keys.
 - Verified on **Windows** (NVIDIA GPU recommended for Whisper; CPU works but is slower). macOS on Apple Silicon also works — see [docs/STUDENT_SETUP_MAC.md](docs/STUDENT_SETUP_MAC.md).
 
@@ -54,7 +54,7 @@ Everything in the app also works with mouse and keyboard, so the voice and hand-
 ## Using voice and gesture input
 
 - **Voice:** hold **V** (or the **mouse middle button**) to talk, release to execute the recognized command — e.g. "show heart", "rotate", "zoom in 20 percent", "show heart and focus". Up to three commands can be chained with "and"/"then".
-- **Hand tracking:** switch modes by voice — **"gesture leap"** (Leap Motion), **"gesture video"** (webcam), or **"gesture off"** (mouse only). In either tracking mode, move your hand to steer the cursor and pinch thumb + index finger to click/select. In Leap mode, a closed fist rotates the camera and two hands pan/zoom.
+- **Hand tracking:** switch modes by voice — **"gesture leap"** (Leap Motion), **"gesture video"** (webcam), or **"gesture off"** (mouse only). In either tracking mode, move your hand to steer the cursor, pinch thumb + index finger to click/select, make a fist and move to rotate, and use two hands to pan/zoom (two fists in webcam mode).
 
 See [docs/VOICE_AND_GESTURE_COMMANDS.md](docs/VOICE_AND_GESTURE_COMMANDS.md) for the full command and gesture list.
 
