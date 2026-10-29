@@ -1,0 +1,47 @@
+# faster-whisper sidecar config -- see README.md for setup. Values below match the
+# asr-migration-brief.md pinned configuration; only change these if you know why.
+
+model: deepdml/faster-whisper-large-v3-turbo-ct2
+device: cuda
+compute_type: int8_float16
+
+# Applied on top of the values above when running on macOS. CTranslate2 has no GPU backend
+# there (no CUDA, no Metal), so Apple Silicon Macs run on CPU. If large-v3-turbo is too slow
+# on a given Mac, add a smaller `model:` here (e.g. small.en) rather than changing the one
+# above, so the Windows/NVIDIA setup stays as pinned.
+macos:
+  device: cpu
+  compute_type: int8
+
+language: en                     # pinned -- do not autodetect
+vad_filter: true                 # drops empty/silent captures so an accidental button
+                                  # press doesn't cause Whisper to hallucinate text
+condition_on_previous_text: false # each push-to-talk press is an independent utterance
+
+host: 127.0.0.1
+port: 8765
+
+# Path to the vocabulary JSON that Unity's VoiceCommandMatcher exports at startup
+# (Assets/StreamingAssets/asr_vocabulary.json in the Unity project) -- built from the actual
+# command keywords/anatomy part list, not a hand-maintained duplicate. Point this at your
+# Unity project's copy. If the file isn't there yet (e.g. testing the sidecar standalone
+# before Unity has ever run), initial_prompt_fallback below is used instead and a warning is
+# logged -- the sidecar still starts and is still testable.
+vocabulary_path: "../../Assets/StreamingAssets/asr_vocabulary.json"
+
+# Prepended to the vocabulary phrases -- initial_prompt also nudges Whisper's output
+# formatting/punctuation style, not just word choice, so this can be adjusted if punctuation
+# behavior proves troublesome in testing.
+initial_prompt_prefix: "Anatomy application voice commands, spoken clearly and directly:"
+
+initial_prompt_fallback:
+  - "show heart"
+  - "show brain"
+  - "show muscles"
+  - "show skeleton"
+  - "zoom in"
+  - "zoom out"
+  - "rotate"
+  - "reset"
+  - "focus"
+  - "slice on"

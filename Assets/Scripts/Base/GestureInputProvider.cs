@@ -7,8 +7,10 @@ using UnityEngine;
 /// Reads index-fingertip position and thumb/index pinch from the running HandLandmarkerRunner
 /// (found automatically, even if it lives in an additively-loaded scene) and exposes them as
 /// mouse-equivalent static state that PointerInput reads. Enable/disable is exposed as an
-/// Inspector checkbox and can also be driven at runtime via <see cref="SetEnabled"/> (used by
-/// the "gestures on"/"gestures off" voice commands).
+/// Inspector checkbox and can also be driven at runtime via <see cref="SetEnabled"/>. Actual
+/// activation additionally requires <see cref="HandInputCoordinator"/>.Mode == Video -- set by
+/// the "gesture off"/"gesture leap"/"gesture video" voice commands -- so this backend only
+/// drives the pointer while the Leap Motion backend (LeapInputProvider) isn't selected.
 /// </summary>
 public class GestureInputProvider : MonoBehaviour
 {
@@ -27,6 +29,7 @@ public class GestureInputProvider : MonoBehaviour
     public static bool MirrorX { get; private set; }
     public static bool IsTracking { get; private set; }
     public static Vector2 ScreenPosition { get; private set; }
+    public static bool IsPinching { get; private set; }
     public static bool PinchWasPressedThisFrame { get; private set; }
     public static bool PinchWasReleasedThisFrame { get; private set; }
 
@@ -114,7 +117,7 @@ public class GestureInputProvider : MonoBehaviour
 
     private void Update()
     {
-        Enabled = enableGestures;
+        Enabled = enableGestures && HandInputCoordinator.Mode == HandInputMode.Video;
         MirrorX = mirrorX;
 
         if (_runner == null)
@@ -158,6 +161,7 @@ public class GestureInputProvider : MonoBehaviour
         if (!validFrame)
         {
             IsTracking = false;
+            IsPinching = false;
             _wasPinching = false;
             if (_debugText != null && Enabled)
                 _debugText.text = "Pinch: no hand tracked";
@@ -183,6 +187,7 @@ public class GestureInputProvider : MonoBehaviour
             PinchWasReleasedThisFrame = true;
 
         _wasPinching = isPinching;
+        IsPinching = isPinching;
         IsTracking = true;
     }
 

@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 using System.Linq;
 using TMPro;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 /// <summary>
 /// Detects clicks on objects and acts accordingly.
@@ -13,11 +14,22 @@ public class RaycastObject : MonoBehaviour
 {
     public static RaycastObject instance;
 
+    /// <summary>Diagnostic snapshot of the last pointer-release attempt (distance from
+    /// press to release, and what was under the cursor) -- surfaced through
+    /// LeapInputProvider's debug readout to see live why a pinch did/didn't select.</summary>
+    public static string DebugClickInfo { get; private set; } = "";
+
     public float clickRadius;
+
     private Canvas canvas;
     public TextMeshProUGUI highlightText;
     public Vector2 mouseTextOffset;
     public RectTransform gestureCursor;
+    public Color gestureCursorPinchColor = Color.green;
+
+    private Image gestureCursorImage;
+    private Color gestureCursorDefaultColor;
+    private bool gestureCursorColorCached;
 
     [HideInInspector]
     public TangibleBodyPart bodyPartScript;
@@ -32,6 +44,12 @@ public class RaycastObject : MonoBehaviour
     private RaycastHit[] hits;
     private Vector2 firstMousePos = new Vector2();
     private GameObject objectSelected;
+
+    // Snapshot of what was under the cursor at the moment of press -- used instead of
+    // re-checking distance/objectSelected at release for hand-tracking input (see Select()).
+    private GameObject pressedObject;
+    private TangibleBodyPart pressedBodyPart;
+    private RaycastHit pressedHit;
 
     private int layer_mask1;
     private int layer_mask2;
@@ -60,8 +78,16 @@ public class RaycastObject : MonoBehaviour
 
     void Update()
     {
-        // If click on UI
-        if (raycastBlocked || EventSystem.current.IsPointerOverGameObject())
+        // If click on UI -- while a hand-tracking backend drives the pointer, only trust
+        // GestureUIInput's gesture-cursor-based check. EventSystem.IsPointerOverGameObject()
+        // reflects the real OS mouse position, which sits wherever it was last left and would
+        // block 3D selection any time it happens to rest over UI, regardless of the gesture
+        // cursor's actual position.
+        bool overUI = PointerInput.IsHandTracking
+            ? GestureUIInput.IsOverUI
+            : EventSystem.current.IsPointerOverGameObject();
+
+        if (raycastBlocked || overUI)
         {
             highlightText.text = "";
             return;
@@ -82,11 +108,34 @@ public class RaycastObject : MonoBehaviour
 
         if (gestureCursor != null)
         {
-            bool tracking = GestureInputProvider.Enabled && GestureInputProvider.IsTracking;
+            bool tracking = PointerInput.IsHandTracking;
             if (gestureCursor.gameObject.activeSelf != tracking)
                 gestureCursor.gameObject.SetActive(tracking);
             if (tracking)
+            {
                 gestureCursor.position = PointerInput.Position;
+
+                if (!gestureCursorColorCached)
+                {
+                    gestureCursorImage = gestureCursor.GetComponent<Image>();
+                    if (gestureCursorImage != null)
+                    {
+                        gestureCursorDefaultColor = gestureCursorImage.color;
+                        // The cursor is positioned at PointerInput.Position every frame -- the
+                        // exact point GestureUIInput raycasts UI at. With raycastTarget left on
+                        // (its default), the cursor was raycasting into itself and reporting
+                        // "over UI" no matter what was actually behind it, permanently blocking
+                        // 3D selection and feeding GestureUIInput its own icon instead of the
+                        // real button underneath. The cursor is purely visual and must never be
+                        // a raycast target itself.
+                        gestureCursorImage.raycastTarget = false;
+                    }
+                    gestureCursorColorCached = true;
+                }
+
+                if (gestureCursorImage != null)
+                    gestureCursorImage.color = PointerInput.IsPinching ? gestureCursorPinchColor : gestureCursorDefaultColor;
+            }
         }
     }
 
@@ -209,33 +258,58 @@ public class RaycastObject : MonoBehaviour
         if (PointerInput.WasPressedThisFrame)
         {
             firstMousePos = PointerInput.Position;
+            pressedObject = objectSelected;
+            pressedBodyPart = bodyPartScript;
+            pressedHit = hit;
         }
         //Mouse up as button
-        else if ((PointerInput.WasReleasedThisFrame)
-            && Vector3.Distance(firstMousePos, PointerInput.Position) < 10f)
+        else if (PointerInput.WasReleasedThisFrame)
         {
-            //If clicked 'nothing'
-            if (objectSelected == null)
-                ClickedNull();
+            float releaseDistance = Vector3.Distance(firstMousePos, PointerInput.Position);
 
-            else if (LayerMask.LayerToName(objectSelected.layer).Equals("Cube"))
+            // Hand tracking: act on whatever was under the cursor at the moment of *press*,
+            // not release, and skip the distance gate entirely. A pinch-hold inevitably drifts
+            // on screen (small hand movement maps to large screen movement given the small
+            // interaction volume, worse the longer the hold lasts -- observed live: 120-300px
+            // drift on clean, correctly-detected pinches), so re-checking position/target at
+            // release made real clicks fail unpredictably. There's no drag gesture routed
+            // through PointerInput that this would need to disambiguate against -- box-select
+            // reads the real Mouse device directly.
+            //
+            // Mouse: unchanged, tight 10px tolerance using the live (release-time) target.
+            bool handTracking = PointerInput.IsHandTracking;
+            GameObject clickedObject = handTracking ? pressedObject : objectSelected;
+            TangibleBodyPart clickedBodyPart = handTracking ? pressedBodyPart : bodyPartScript;
+            RaycastHit clickedHit = handTracking ? pressedHit : hit;
+            bool passesGate = handTracking || releaseDistance < 10f;
+
+            DebugClickInfo = $"release dist={releaseDistance:F0}px obj={(clickedObject != null ? clickedObject.name : "none")}";
+
+            if (passesGate)
             {
-                GizmoFace faceClicked = GizmoBehaviour.instance.GetHitFace(hit);
-                GizmoBehaviour.instance.SetCameraRotation(faceClicked);
-                if (ActionControl.crossSectionsEnabled)
-                    CrossPlanesGizmo.Instance.SetPlane(faceClicked);
-            }
-            else if(!ActionControl.creatingLocalNote)
-            {
-                Label labelScript = objectSelected.GetComponent<Label>();
+                //If clicked 'nothing'
+                if (clickedObject == null)
+                    ClickedNull();
 
-                if (bodyPartScript != null)
-                    bodyPartScript.ObjectClicked();
+                else if (LayerMask.LayerToName(clickedObject.layer).Equals("Cube"))
+                {
+                    GizmoFace faceClicked = GizmoBehaviour.instance.GetHitFace(clickedHit);
+                    GizmoBehaviour.instance.SetCameraRotation(faceClicked);
+                    if (ActionControl.crossSectionsEnabled)
+                        CrossPlanesGizmo.Instance.SetPlane(faceClicked);
+                }
+                else if(!ActionControl.creatingLocalNote)
+                {
+                    Label labelScript = clickedObject.GetComponent<Label>();
 
-                if (labelScript != null)
-                    labelScript.Click();
+                    if (clickedBodyPart != null)
+                        clickedBodyPart.ObjectClicked();
+
+                    if (labelScript != null)
+                        labelScript.Click();
+                }
+                objectSelected = null;
             }
-            objectSelected = null;
         }
     }
 

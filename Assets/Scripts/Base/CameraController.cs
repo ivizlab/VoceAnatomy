@@ -292,6 +292,61 @@ public class CameraController : MonoBehaviour
     }
 
     /// <summary>
+    /// Rotates the camera by a raw screen-space-equivalent delta, the same math the
+    /// right-mouse-drag path in Update() uses -- called by LeapCameraGestures for the
+    /// one-hand grab+move rotate gesture, so Leap rotation reuses xSpeed/ySpeed/
+    /// rotationVelocity tuning instead of needing its own.
+    /// </summary>
+    /// <param name="screenDelta">Frame-to-frame movement in screen-pixel-equivalent units.</param>
+    public void ApplyGestureRotateDelta(Vector2 screenDelta)
+    {
+        if (ActionControl.blockedInput || lerping || autoRotating)
+            return;
+
+        x += screenDelta.x * xSpeed * rotationVelocity * 0.001f;
+        y -= screenDelta.y * ySpeed * rotationVelocity * 0.001f;
+
+        if (ActionControl.limitRotation)
+            y = ClampAngle(y, yMinLimit, yMaxLimit);
+
+        var rotation = Quaternion.Euler(y, x, z);
+        trans.rotation = rotation;
+        trans.position = rotation * rotationOffset + pivot;
+    }
+
+    /// <summary>
+    /// Pans the camera by a raw world-space delta, the same Translate the middle-mouse-
+    /// drag path in Update() uses -- called by LeapCameraGestures for the two-hand
+    /// move-together pan gesture.
+    /// </summary>
+    /// <param name="worldDelta">World-space translation to apply this frame.</param>
+    public void ApplyGesturePanDelta(Vector3 worldDelta)
+    {
+        if (ActionControl.blockedInput || lerping || movementIsBlocked || autoRotating)
+            return;
+
+        cameraCenter.Translate(worldDelta, Space.World);
+        trans.Translate(worldDelta, Space.World);
+    }
+
+    /// <summary>
+    /// Zooms by a raw scroll-wheel-equivalent delta, the same math the scroll-wheel path
+    /// in Update() uses -- called by LeapCameraGestures for the two-hand spread-apart/
+    /// together zoom gesture. Positive zooms in (matches scrolling up).
+    /// </summary>
+    /// <param name="scrollDelta">Scroll-wheel-equivalent delta; positive zooms in.</param>
+    public void ApplyGestureZoomDelta(float scrollDelta)
+    {
+        if (ActionControl.blockedInput || !ActionControl.canZoom)
+            return;
+
+        distance -= scrollDelta * cam.orthographicSize * zoomVelocity * 0.001f;
+
+        if (distance > MAX_DISTANCE) distance = MAX_DISTANCE;
+        if (distance < MIN_DISTANCE) distance = MIN_DISTANCE;
+    }
+
+    /// <summary>
     /// Zooms in (negative percent) or out (positive percent) relative to the current
     /// distance -- e.g. -10 moves 10% closer. Used for the "zoom in/out N percent"
     /// voice command.

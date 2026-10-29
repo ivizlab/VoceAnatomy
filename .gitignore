@@ -60,3 +60,14 @@ crashlytics-build.properties
 
 # Firebase private info
 google-services.json
+
+# Per-user editor state (window layouts, search index) -- differs per machine
+/[Uu]ser[Ss]ettings/
+
+# Python ASR sidecar: per-machine virtualenv and bytecode
+python/**/venv/
+__pycache__/
+*.pyc
+
+# Claude Code personal settings (shared project settings in .claude/settings.json are kept)
+.claude/settings.local.json

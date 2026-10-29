@@ -116,15 +116,12 @@ public class VoiceProcessor : MonoBehaviour
     {
         UpdateDevices();
     }
-#if UNITY_EDITOR
-    void Update()
-    {
-        if (CurrentDeviceIndex != MicrophoneIndex)
-        {
-            ChangeDevice(MicrophoneIndex);
-        }
-    }
-#endif
+
+    // Removed the old UNITY_EDITOR-only Update() that reset CurrentDeviceIndex back to the
+    // serialized MicrophoneIndex every frame -- it would silently fight VoiceCommands'
+    // resolve-by-name device selection (see ResolveMicrophoneDevice) during Editor testing,
+    // reverting to whatever index the Inspector field happened to serialize regardless of which
+    // device was actually resolved by name.
 
     /// <summary>
     /// Updates list of available audio devices

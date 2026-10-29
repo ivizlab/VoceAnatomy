@@ -1,0 +1,12 @@
+{
+  "fuzzyMatchingEnabled": true,
+  "microphoneNameContains": "DJI",
+
+  "whisper": {
+    "baseUrl": "http://127.0.0.1:8765",
+    "timeoutSeconds": 8,
+    "autoStartSidecar": true,
+    "sidecarDirectory": "python/asr_sidecar",
+    "sidecarStartupTimeoutSeconds": 60
+  }
+}

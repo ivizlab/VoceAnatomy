@@ -117,7 +117,8 @@ public class HandSkeletonView : MonoBehaviour
         }
 
         bool stale = Time.realtimeSinceStartup - _lastResultTime > TrackingTimeout;
-        bool visible = showSkeleton && parent != null && _hasHand && !stale;
+        bool visible = showSkeleton && parent != null && _hasHand && !stale
+            && HandInputCoordinator.Mode == HandInputMode.Video;
 
         if (!visible)
         {

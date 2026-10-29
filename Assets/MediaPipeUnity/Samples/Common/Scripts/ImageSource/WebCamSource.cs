@@ -132,7 +132,13 @@ namespace Mediapipe.Unity
 
       if (availableSources != null && availableSources.Length > 0)
       {
-        webCamDevice = availableSources[0];
+        // VoceAnatomy: the Leap Motion Controller (and the laptop's IR face-unlock camera) also
+        // enumerate as webcams, and the Leap one is held by the Ultraleap service, so opening it
+        // times out ("Failed to start WebCam"). Prefer the first regular color webcam.
+        webCamDevice = availableSources.Cast<WebCamDevice?>().FirstOrDefault(device =>
+            device.Value.name.IndexOf("Leap", StringComparison.OrdinalIgnoreCase) < 0 &&
+            device.Value.name.IndexOf(" IR ", StringComparison.OrdinalIgnoreCase) < 0)
+          ?? availableSources[0];
       }
     }
 
