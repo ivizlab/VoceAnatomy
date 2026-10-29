@@ -1,6 +1,6 @@
 # Voce-Anatomy
 
-Voce-Anatomy is a real-time, hands-free educational tool for exploring a high-resolution, open-source 3D model of human anatomy. Instead of a mouse and keyboard, you speak commands — "show the heart," "rotate," "zoom in 20 percent" — and point and pinch in the air to select and manipulate structures, using nothing but a microphone and a webcam. It's designed for classroom and demo settings where a presenter can navigate the body naturally, without breaking eye contact with an audience to click through menus.
+Voce-Anatomy is a real-time, hands-free educational tool for exploring a high-resolution, open-source 3D model of human anatomy. Instead of a mouse and keyboard, you speak commands — "show the heart," "rotate," "zoom in 20 percent" — and point and pinch in the air to select and manipulate structures, using nothing but a microphone and a webcam or Leap Motion controller. It's designed for classroom and demo settings where a presenter can navigate the body naturally, without breaking eye contact with an audience to click through menus.
 
 Voce-Anatomy, developed by Steve DiPaola at the research lab: iVizLab, Simon Fraser University.
 
