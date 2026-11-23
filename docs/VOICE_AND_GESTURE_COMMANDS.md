@@ -90,6 +90,20 @@ layer name to hide it.
 | "gesture leap" / "gestures leap" | Leap Motion controller drives the pointer |
 | "gesture video" / "gestures video" / "gesture camera" | Webcam (MediaPipe) drives the pointer |
 
+### Macros
+| Say | Does |
+|---|---|
+| "macro [name]" | Runs that macro file from `StreamingAssets/macros/`, e.g. "macro heart intro" runs `heart_intro.macro` |
+| "macro [template] [part]" | Runs a template macro on a part, e.g. "macro explain aorta" |
+
+- **"macro" must come first**: "heart intro macro" is not recognised. It can follow other commands: "reset and macro heart intro".
+- Everything after "macro" is the name, so its words don't fire their own commands ("macro slice demo" doesn't also turn the slice on).
+- **Mis-heard names still work.** The exact name is tried first, then the closest macro file by spelling, so "hard intro" finds `heart_intro`. Only existing macro files can match, so a near miss can't run anything else. Near misses of the word itself ("micro", "macros") are accepted when fuzzy matching is on.
+- If nothing is close, the console says *no macro sounds like "…"* and lists the macros.
+- The macro names present at startup are added to Whisper's recognition prompt. A macro recorded during a session runs by voice too, but is only added to the prompt after a restart.
+- Any new spoken command interrupts a running macro. There's no spoken "stop" yet; type `stop` in the console.
+- Implemented in `Assets/Scripts/Voice/VoiceInterpreter.cs` (intercepted before the rule table above).
+
 Numbers can be spoken as words ("twenty five") or digits; the app understands both.
 Recognition is fuzzy on longer words (small mis-transcriptions like "muscl" still match),
 but short words (3 letters or fewer, e.g. "in"/"out") must be heard exactly.

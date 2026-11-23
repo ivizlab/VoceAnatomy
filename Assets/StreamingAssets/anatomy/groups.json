@@ -7,6 +7,9 @@
     { "name": "hamstrings",      "parts": ["long head of biceps femoris", "short head of biceps femoris", "semitendinosus muscle", "semimembranosus muscle"] },
     { "name": "shoulder girdle", "parts": ["clavicle", "scapula"] },
     { "name": "forearm bones",   "parts": ["radius", "ulna"] },
-    { "name": "lower leg bones", "parts": ["tibia", "fibula"] }
+    { "name": "lower leg bones", "parts": ["tibia", "fibula"] },
+    { "name": "great vessels",   "parts": ["ascending aorta", "aortic arch", "thoracic aorta", "pulmonary trunk", "left pulmonary artery", "right pulmonary artery", "pulmonary veins", "superior vena cava", "inferior vena cava (thoracic part)"] },
+    { "name": "coronary arteries", "parts": ["arteries of heart"] },
+    { "name": "mediastinum",     "parts": ["heart", "great vessels", "trachea", "oesophagus", "thymus"] }
   ]
 }

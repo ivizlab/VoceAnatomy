@@ -53,7 +53,7 @@ Everything in the app also works with mouse and keyboard, so the voice and hand-
 
 ## Using voice and gesture input
 
-- **Voice:** hold **V** (or the **mouse middle button**) to talk, release to execute the recognized command — e.g. "show heart", "rotate", "zoom in 20 percent", "show heart and focus". Up to three commands can be chained with "and"/"then".
+- **Voice:** hold **V** (or the **mouse middle button**) to talk, release to execute the recognized command — e.g. "show heart", "rotate", "zoom in 20 percent", "show heart and focus". Up to three commands can be chained with "and"/"then". Say **"macro"** + a macro's name to run a scripted lesson, e.g. "macro blood tour" (see [docs/VoceAnatomy_Commands_and_Macros_Guide.md](docs/VoceAnatomy_Commands_and_Macros_Guide.md)).
 - **Hand tracking:** switch modes by voice — **"gesture leap"** (Leap Motion), **"gesture video"** (webcam), or **"gesture off"** (mouse only). In either tracking mode, move your hand to steer the cursor, pinch thumb + index finger to click/select, make a fist and move to rotate, and use two hands to pan/zoom (two fists in webcam mode).
 
 See [docs/VOICE_AND_GESTURE_COMMANDS.md](docs/VOICE_AND_GESTURE_COMMANDS.md) for the full command and gesture list.

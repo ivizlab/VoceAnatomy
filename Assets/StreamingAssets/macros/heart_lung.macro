@@ -1,0 +1,53 @@
+# heart_lungs_tour.macro -- run with "heart lungs tour"
+# Hands-free tour (about 90 seconds): how the heart and lungs work together.
+# "caption 6 ..." shows the text for 6 seconds and the macro waits that long.
+# Lines starting with # are study notes: they do NOT show on screen.
+
+reset
+title 4 "The Heart and Lungs"
+show heart, lungs; focus
+caption 6 "Two organs, one job: get *oxygen* into the blood and *carbon dioxide* out."
+# STUDY: the circulatory and respiratory systems work as one loop.
+wait 1
+
+# --- Part 1: the lungs ---
+isolate lungs; focus
+rotate slow
+caption 7 "The *lungs* swap gases through millions of tiny air sacs called alveoli."
+# STUDY: oxygen moves from the air into the blood; CO2 moves from the blood into the air.
+
+show windpipe, lungs; focus
+caption 5 "Air travels down the windpipe and branches into each lung."
+wait 1
+
+# --- Part 2: the heart ---
+isolate heart; focus
+rotate slow
+caption 7 "The *heart* is a double pump: the right side serves the lungs, the left side serves the body."
+# STUDY: two circuits in one organ -- the pulmonary circuit and the systemic circuit.
+
+isolate heart chambers; focus
+caption 7 "Four chambers: two atria receive blood, two ventricles pump it out."
+wait 1
+
+# --- Part 3: follow the blood ---
+show right ventricle; focus
+caption 7 "Step 1. The *right ventricle* sends oxygen-poor blood to the lungs."
+# STUDY: blood arrives here from the body via the right atrium.
+
+show heart, lungs; focus
+caption 7 "Step 2. In the lungs the blood drops off carbon dioxide and picks up oxygen."
+# STUDY: the exchange happens across walls only one cell thick.
+
+show left ventricle; focus
+caption 7 "Step 3. Oxygen-rich blood returns and the *left ventricle* pumps it to the whole body."
+# STUDY: the left ventricle has the thickest wall because it pushes blood furthest.
+
+show aorta; focus
+caption 6 "It leaves through the *aorta*, the body's main artery."
+wait 1
+
+# --- Wrap up ---
+show heart, lungs, aorta; zoom out
+caption 8 "Round trip: body to right heart to lungs to left heart to body. Repeats about 70 times a minute."
+caption clear; title clear

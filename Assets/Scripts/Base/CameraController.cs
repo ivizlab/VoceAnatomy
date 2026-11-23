@@ -433,6 +433,36 @@ public class CameraController : MonoBehaviour
     }
 
     /// <summary>
+    /// Turns smoothly to a fixed orientation (the animated form of <see cref="SetOrientation"/>), taking
+    /// the shorter way round. Counts as animating, so commands can wait for it to finish.
+    /// </summary>
+    public void AnimateOrientation(float pitch, float yaw, float duration = 1.2f)
+    {
+        if (autoRotateCoroutine != null)
+            StopCoroutine(autoRotateCoroutine);
+        autoRotateCoroutine = TurnToOrientation(pitch, yaw, duration);
+        StartCoroutine(autoRotateCoroutine);
+    }
+
+    IEnumerator TurnToOrientation(float pitch, float yaw, float duration)
+    {
+        autoRotating = true;
+        float startX = x, startY = y, startZ = z;
+        float endX = startX + Mathf.DeltaAngle(startX, yaw);
+        for (float time = 0; time < duration; time += Time.deltaTime)
+        {
+            float t = Mathf.SmoothStep(0f, 1f, time / duration);
+            x = Mathf.Lerp(startX, endX, t);
+            y = Mathf.Lerp(startY, pitch, t);
+            z = Mathf.Lerp(startZ, 0f, t);
+            UpdatePosition();
+            yield return null;
+        }
+        SetOrientation(pitch, yaw);
+        autoRotating = false;
+    }
+
+    /// <summary>
     /// Resets the camera to its default position and parameters.
     /// </summary>
     public void ResetCamera()

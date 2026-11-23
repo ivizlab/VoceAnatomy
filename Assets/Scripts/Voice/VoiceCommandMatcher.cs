@@ -196,7 +196,7 @@ namespace Assets.Scripts.Voice
             return false;
         }
 
-        private static int LevenshteinDistance(string a, string b)
+        public static int LevenshteinDistance(string a, string b)
         {
             int[,] d = new int[a.Length + 1, b.Length + 1];
             for (int i = 0; i <= a.Length; i++) d[i, 0] = i;
@@ -220,12 +220,16 @@ namespace Assets.Scripts.Voice
         /// independently launchable/testable even without Unity having run first (it falls back
         /// to a small built-in default if the file isn't there yet).
         /// </summary>
-        public void ExportVocabulary(string path)
+        /// <param name="extraPhrases">Phrases that aren't rules here but should still bias recognition
+        /// (the "macro &lt;name&gt;" phrases for the macro files present at startup). Written last, since
+        /// Whisper keeps the end of an over-long prompt.</param>
+        public void ExportVocabulary(string path, IEnumerable<string> extraPhrases = null)
         {
             try
             {
+                var phrases = grammarPhrases.Concat(extraPhrases ?? Enumerable.Empty<string>()).Distinct();
                 string wordsJson = string.Join(", ", grammarWords.OrderBy(w => w).Select(w => "\"" + EscapeJson(w) + "\""));
-                string phrasesJson = string.Join(", ", grammarPhrases.Distinct().Select(p => "\"" + EscapeJson(p) + "\""));
+                string phrasesJson = string.Join(", ", phrases.Select(p => "\"" + EscapeJson(p) + "\""));
                 string json = "{\n  \"words\": [" + wordsJson + "],\n  \"phrases\": [" + phrasesJson + "]\n}\n";
                 File.WriteAllText(path, json);
             }
@@ -325,7 +329,16 @@ namespace Assets.Scripts.Voice
             grammarPhrases.Add("then");
             grammarWords.Add("and");
             grammarWords.Add("then");
+
+            // "macro <name>" isn't a rule -- VoiceInterpreter intercepts it before matching, since the
+            // name's own words ("heart", "slice") mustn't fire commands -- but the word still belongs
+            // in the vocabulary.
+            grammarPhrases.Add(MacroWord);
+            grammarWords.Add(MacroWord);
         }
+
+        /// <summary>The spoken word that runs a macro: "macro heart intro".</summary>
+        public const string MacroWord = "macro";
 
         private void AddLayerRule(string label, string[] subjectWords)
         {

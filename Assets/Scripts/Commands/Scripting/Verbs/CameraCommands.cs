@@ -92,7 +92,7 @@ namespace Assets.Scripts.Scripting
 
     [Command("view", Phrases = new[] { "front => view front", "face front => view front" },
         Args = "front | back | left | right | top | bottom",
-        Help = "Turn to a standard view, keeping zoom and centre")]
+        Help = "Turn smoothly to a standard view, keeping zoom and centre")]
     public class ViewCmd : AnatomyCommand
     {
         // (pitch, yaw) for each named view; front is the app's default orientation.
@@ -107,8 +107,8 @@ namespace Assets.Scripts.Scripting
         public override IEnumerator Execute(CommandContext ctx)
         {
             var view = Views.First(v => ctx.Inv.Has(v.name));
-            CameraController.instance.SetOrientation(view.pitch, view.yaw);
-            yield break;
+            CameraController.instance.AnimateOrientation(view.pitch, view.yaw);
+            yield return WaitForCamera();
         }
     }
 }

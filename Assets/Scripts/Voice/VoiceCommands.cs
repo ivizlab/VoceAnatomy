@@ -2,6 +2,7 @@ using Assets.Scripts.Scripting;
 using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -70,7 +71,8 @@ namespace Assets.Scripts.Voice
             // Export the vocabulary this matcher just built, so the Whisper sidecar's
             // initial_prompt is generated from the same single source of truth as the matcher
             // rather than a hand-maintained duplicate.
-            VoiceInterpreter.Matcher.ExportVocabulary(Path.Combine(Application.streamingAssetsPath, "asr_vocabulary.json"));
+            VoiceInterpreter.Matcher.ExportVocabulary(Path.Combine(Application.streamingAssetsPath, "asr_vocabulary.json"),
+                MacroLibrary.Names.Select(name => VoiceCommandMatcher.MacroWord + " " + name));
 
             var whisper = new WhisperAsrBackend(config.WhisperBaseUrl, config.WhisperTimeoutSeconds,
                 config.AutoStartSidecar ? config.SidecarDirectory : null, config.SidecarStartupTimeoutSeconds);

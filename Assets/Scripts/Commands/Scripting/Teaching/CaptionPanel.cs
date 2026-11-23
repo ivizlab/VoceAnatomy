@@ -149,15 +149,16 @@ namespace Assets.Scripts.Scripting
             waitHint = new GameObject("WaitHint", typeof(RectTransform), typeof(TextMeshProUGUI));
             waitHint.transform.SetParent(canvasObject.transform, false);
             var hint = waitHint.GetComponent<TextMeshProUGUI>();
-            hint.text = "click or → to continue";
-            hint.fontSize = 24;
-            hint.color = new Color(1, 1, 1, 0.75f);
+            hint.text = "Click or → to continue";
+            hint.fontSize = 34;
+            hint.fontStyle = FontStyles.Bold;
+            hint.color = new Color(1f, 0.85f, 0.3f, 1f);
             hint.alignment = TextAlignmentOptions.BottomRight;
             hint.raycastTarget = false;
             var hintRect = (RectTransform)waitHint.transform;
             hintRect.anchorMin = hintRect.anchorMax = hintRect.pivot = new Vector2(1, 0);
             hintRect.anchoredPosition = new Vector2(-30, 24);
-            hintRect.sizeDelta = new Vector2(400, 40);
+            hintRect.sizeDelta = new Vector2(520, 50);
             waitHint.SetActive(false);
         }
 

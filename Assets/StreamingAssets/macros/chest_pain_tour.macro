@@ -1,0 +1,196 @@
+# chest_pain_tour.macro -- say "macro chest pain tour", or type "chest pain tour"
+# Week 19 CBL (Chest pain: Robert, 58, exertional chest pressure relieved by rest).
+# Covers the second half of the anatomy plan: pleura, mediastinum, heart and great vessels,
+# then the coronary arteries one by one. The muscle and bone dissection that comes before it is not included.
+#
+# A step-through lesson: each step sets the view, shows a caption, then waits.
+# Advance with a click on the model, the right arrow, Page Down or a clicker. Close the console (Esc) first.
+# "# STUDY:" lines are presenter notes; they do not show on screen.
+# "great vessels", "coronary arteries" and "mediastinum" are teaching groups in anatomy/groups.json.
+#
+# Things the model does not have, so the captions describe them instead:
+#   - pericardium (no sac to show or hide) and a separate "mediastinum" object
+#   - a separate posterior descending artery: the RCA is highlighted on the inferior surface and the presenter traces the groove
+#   - grooves such as the interventricular sulci are landmark lines only, and commands can't name them
+#   - a right marginal branch: the "Marginal artery" in the model is the colon's, so don't use that name here
+# "view left" is meant to be the patient's left. If it shows the right side, swap left and right below.
+
+reset
+title "Chest Pain: The Anatomy"
+isolate thoracic skeleton, pleura, lungs, great vessels, heart; focus
+caption "Robert, 58: chest *pressure* when he exerts himself, gone when he rests. Where does it come from?"
+# STUDY: differential on the case: angina, MI, aortic dissection, PE, GERD, costochondritis. Every one lives in this box.
+wait click
+
+caption "Inside the rib cage, three compartments: two *pleural cavities* and, between them, the *mediastinum*."
+wait click
+
+# --- 1. The pleura ---
+title "The Pleural Sacs"
+isolate pleura, lungs, heart, great vessels; focus
+caption "Each lung sits in its own sealed sac. *Parietal pleura* lines the chest wall, diaphragm and mediastinum."
+# STUDY: parietal pleura parts: costal, diaphragmatic, mediastinal, cervical (dome above the first rib).
+wait click
+
+hide pleura
+caption "*Visceral pleura* is fused to the lung's surface. Between the two layers: only a thin film of fluid."
+wait click
+
+rotate slow &
+caption "The fluid couples lung to chest wall. Slightly *negative pressure* holds the lung open as the chest expands."
+# STUDY: about -5 cmH2O at rest. Let air in (pneumothorax) and the coupling breaks: the lung recoils and collapses.
+wait click
+
+caption "Parietal pleura has somatic nerves: irritation gives *sharp pain that worsens on breathing*. Visceral pleura feels nothing."
+# STUDY: pleuritic pain points to PE, pneumonia or pneumothorax, not to angina. Good contrast with Robert's dull pressure.
+wait click
+
+# --- 2. The mediastinum ---
+title "The Mediastinum"
+isolate sternum, thoracic vertebrae, diaphragm, lungs, mediastinum; focus; view front
+caption "The *mediastinum* is the space between the pleural sacs: sternum in front, vertebrae behind, diaphragm below."
+# STUDY: superior border is the thoracic inlet; laterally the mediastinal pleura. The sternal angle (T4/5) divides superior from inferior.
+wait click
+
+isolate lungs, pleura, heart; focus
+caption "The heart sits in the *middle mediastinum*, wrapped in its own sac, the *pericardium*, not in a pleural cavity."
+# STUDY: fibrous pericardium outside, serous pericardium inside (parietal layer, plus visceral = epicardium).
+# Fluid in this closed sac compresses the heart (tamponade). The model has no pericardium to show.
+wait click
+
+hide pleura, lungs
+show mediastinum; focus
+caption "Take the lungs away and the mediastinum's contents are left: heart, great vessels, trachea, oesophagus."
+wait click
+
+# --- 3. Heart, great vessels and their neighbours ---
+title "Heart and Great Vessels"
+isolate heart, great vessels; focus; view front
+caption "From the front: the *aorta* leaves the left ventricle and arches up; the *pulmonary trunk* leaves the right."
+wait click
+
+show superior vena cava, inferior vena cava (thoracic part), pulmonary veins
+caption "Returning: the *venae cavae* drain the body into the right atrium; *pulmonary veins* bring oxygenated blood to the left."
+wait click
+
+isolate heart, great vessels, trachea, oesophagus; focus
+view left
+caption "From the side, the depth order: heart in front, then the *trachea* and *oesophagus*, then the *descending aorta*."
+wait click
+
+view back
+show oesophagus; focus
+caption "From behind: the *oesophagus* runs directly behind the left atrium."
+# STUDY: why reflux (GERD) can mimic cardiac pain, and why a transoesophageal echo gets such a close view of the heart.
+wait click
+
+show thoracic aorta; focus
+caption "The *descending thoracic aorta* runs down beside the spine, behind the heart."
+# STUDY: aortic dissection: tearing pain, often felt between the shoulder blades. A must-not-miss on this case.
+wait click
+
+# --- 4. The coronary arteries ---
+title "The Heart's Own Supply"
+isolate heart, coronary arteries; focus heart; view front
+caption "The heart feeds itself through the *coronary arteries*. We'll follow each one from the aorta."
+wait click
+
+caption "The left ventricle is squeezed during systole, so it fills its arteries mainly in *diastole*."
+# STUDY: exertion raises heart rate and O2 demand, and a faster rate shortens diastole: supply falls as demand rises. That is Robert's angina.
+wait click
+
+# --- Aortic root ---
+title "The Aortic Root"
+isolate root of aorta, ascending aorta, coronary arteries; focus root of aorta
+caption "Both coronary arteries arise from the *aortic sinuses*, just above the aortic valve."
+wait click
+
+show aortic valve; focus
+caption "*Right* and *left* coronary arteries leave the right and left sinuses. The third cusp has no artery: the *non-coronary* cusp."
+wait click
+
+# --- Left main ---
+title "Left Coronary Artery"
+isolate heart, coronary arteries; focus heart; view front
+show left coronary artery
+caption "The *left main coronary artery* is short. It passes behind the pulmonary trunk, then divides in two."
+# STUDY: the selection highlights the whole left coronary tree: the left main plus both of its branches.
+wait click
+
+# --- LAD ---
+title "Left Anterior Descending (LAD)"
+isolate heart, coronary arteries; focus heart; view front
+show anterior interventricular artery
+caption "The *LAD* runs down the anterior interventricular groove towards the apex."
+wait click
+
+caption "It supplies the *anterior wall* of the left ventricle and the apex."
+wait click
+
+isolate heart
+slice at 40
+caption "Cut open: its *septal branches* dive into the front two-thirds of the *interventricular septum*."
+# STUDY: the septum carries the bundle branches, so an LAD infarct can cause bundle branch block.
+wait click
+
+slice off
+isolate heart, coronary arteries; focus heart
+show anterior interventricular artery
+caption "Most of the left ventricle depends on the LAD: block it near its origin and you get the *widow-maker* infarct."
+wait click
+
+# --- Circumflex ---
+title "Circumflex Artery"
+view left
+show circumflex artery of heart
+caption "Back to the split: the *circumflex* turns left in the coronary (atrioventricular) groove."
+wait click
+
+rotate 45
+caption "It wraps round to supply the *lateral wall* of the left ventricle and the left atrium."
+# STUDY: obtuse marginal branches come off here. In about 1 in 10 people (left-dominant) the circumflex also gives the PDA.
+wait click
+
+# --- RCA ---
+title "Right Coronary Artery"
+view front
+show right coronary artery
+caption "The *right coronary artery* leaves the right sinus and runs down the right atrioventricular groove."
+wait click
+
+view right
+caption "Its *right marginal branch* runs along the lower border to the *right ventricle's free wall*."
+# STUDY: the model has no separate right marginal branch: point along the lower right border of the heart.
+wait click
+
+caption "Near its origin it usually supplies the *SA node*, and further on the *AV node*."
+# STUDY: SA node from the RCA in about 60%, AV node in about 80-90%. Inferior MI often brings bradycardia or heart block.
+wait click
+
+# --- PDA ---
+title "Posterior Descending Artery"
+view bottom
+show right coronary artery
+caption "On the inferior surface, the RCA turns down the *posterior interventricular groove* as the *posterior descending artery*."
+# STUDY: the model has no separate PDA (and the groove is only a landmark line, which can't be shown).
+# Point to where the highlighted RCA reaches the crux, then trace down the groove between the ventricles towards the apex.
+wait click
+
+caption "It supplies the *inferior wall* and the back third of the septum. Whichever artery gives the PDA is called *dominant*."
+# STUDY: right-dominant in most people (about 7 in 10).
+wait click
+
+# --- Wrap up ---
+title "Putting It Together"
+isolate heart, coronary arteries; focus heart; view front
+rotate slow &
+caption "*LAD*: front wall and septum. *Circumflex*: side wall. *RCA*: right ventricle, inferior wall, conduction nodes."
+wait click
+
+caption "Narrow one artery and its territory runs short of oxygen when demand rises, then recovers at rest: *angina*."
+# STUDY: cardiac pain afferents enter T1-T4, the same segments as the chest wall and inner arm: why it is felt in the chest and left arm.
+# Contrast: an MI is a blockage that doesn't recover with rest.
+wait click
+
+caption clear; title clear
+zoom out

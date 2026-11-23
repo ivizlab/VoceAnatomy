@@ -1,0 +1,104 @@
+# blood_tour.macro -- say "macro blood tour", or type "blood tour"
+# Hands-free tour (about 2.5 minutes): follow the blood from the heart out to the main organs.
+# "caption 4 ..." shows the text for 4 seconds and the macro waits that long.
+# "rotate slow &" turns the model while the next caption is showing.
+# A title stays up until the next title, so each section keeps its heading.
+# Slice depths are a percentage of the whole body, front (0) to back (100): adjust if a cut misses.
+#
+# Each section follows the same pattern:
+#   1. isolate <organ>, blood vessels, nerves  -- the organ inside the full network (arteries, veins, nerves)
+#   2. isolate <organ>                         -- the network drops away, leaving the organ
+#   3. show blood vessels, nerves              -- the network comes back before the next section
+
+reset
+title "Follow the Blood"
+isolate skeleton, joints, blood vessels, nerves; focus
+rotate slow &
+caption 4 "Under the skin: bones, joints, and thousands of *arteries*, *veins* and *nerves*."
+caption 4 "Every organ runs on blood. Let's follow it out from the heart."
+
+# --- The pump ---
+title "The Heart"
+isolate heart, blood vessels, nerves; focus
+caption 4 "Nerves speed it up or slow it down. Vessels carry everything it pumps."
+isolate heart
+rotate slow &
+caption 4 "A fist-sized pump that beats about *100,000 times a day*."
+caption 4 "It moves around *7,000 litres* of blood every day."
+slice at 40
+caption 4 "Cut open: four chambers. The *left ventricle* has the thickest wall."
+slice off
+isolate heart, arteries of heart; focus
+caption 4 "Even the heart needs feeding: the *coronary arteries* wrap around it."
+# STUDY: a blocked coronary artery is a heart attack.
+show blood vessels, nerves
+
+# --- Out through the aorta ---
+title "The Aorta"
+isolate heart, aorta, blood vessels, nerves; focus
+caption 4 "Arteries carry blood away from the heart. Veins bring it back."
+isolate heart, aorta
+caption 4 "Blood leaves through the *aorta*, about as wide as a garden hose."
+caption 4 "It arches over the heart, then runs down the spine, branching as it goes."
+show blood vessels, nerves
+
+# --- The short loop: lungs ---
+title "To the Lungs"
+isolate heart, pulmonary arteries, lungs, blood vessels, nerves; focus
+caption 4 "Every breath and every heartbeat meet here."
+isolate heart, pulmonary arteries, lungs
+rotate slow &
+caption 4 "The right side of the heart takes the short route: to the *lungs*."
+caption 4 "Spread flat, the lungs' air sacs would cover a small apartment."
+# STUDY: about 70 square metres of gas-exchange surface.
+show blood vessels, nerves
+
+# --- Up to the brain ---
+title "To the Brain"
+isolate brain, left common carotid artery, right common carotid artery, internal carotid artery, cerebral arterial circle, blood vessels, nerves; focus
+caption 4 "From the brain and spinal cord, nerves reach every corner of the body."
+isolate brain, left common carotid artery, right common carotid artery, internal carotid artery, cerebral arterial circle
+rotate slow &
+caption 4 "The *carotid arteries* climb the neck to the brain."
+caption 4 "The brain is 2% of your weight, but takes about *15% of every heartbeat*."
+caption 4 "A ring of arteries at its base, the *circle of Willis*, is its backup supply."
+# STUDY: if one carotid narrows, the ring reroutes blood from the other side.
+show blood vessels, nerves
+
+# --- Down to the gut and liver ---
+title "To the Gut and Liver"
+isolate abdominal aorta, coeliac trunk, common hepatic artery, splenic artery, left gastric artery, stomach, liver, spleen, blood vessels, nerves; focus
+caption 4 "The gut is wrapped in a dense web of vessels to soak up every meal."
+isolate abdominal aorta, coeliac trunk, common hepatic artery, splenic artery, left gastric artery, stomach, liver, spleen
+caption 4 "Just below the diaphragm, one short trunk feeds the *stomach*, *liver* and *spleen*."
+caption 4 "The liver gets a quarter of all blood, most of it second-hand from the gut."
+# STUDY: about 75% arrives through the hepatic portal vein, loaded with nutrients to process.
+show blood vessels, nerves
+
+# --- The kidneys ---
+title "To the Kidneys"
+isolate abdominal aorta, left renal artery, right renal artery, kidney, blood vessels, nerves; focus
+caption 4 "Tucked against the back, the kidneys sit right beside the aorta and vena cava."
+isolate abdominal aorta, left renal artery, right renal artery, kidney
+caption 4 "Short, wide *renal arteries* plug the kidneys straight into the aorta."
+slice at 60
+caption 4 "Cut open: the outer layer filters, the inner pyramids collect urine."
+slice off
+caption 4 "They filter all your blood plasma about *60 times a day*."
+show blood vessels, nerves
+
+# --- The legs ---
+title "To the Legs"
+isolate abdominal aorta, common iliac artery, femoral artery, blood vessels, nerves; focus
+caption 4 "The body's longest nerve, the *sciatic*, runs down each leg beside the arteries."
+isolate abdominal aorta, common iliac artery, femoral artery
+caption 4 "At the pelvis the aorta splits in two, and the *femoral arteries* run down each leg."
+show blood vessels, nerves
+
+# --- The whole network ---
+title "The Whole Network"
+isolate heart, blood vessels, nerves; zoom out
+rotate slow &
+caption 4 "Laid end to end, your blood vessels would wrap around the Earth twice."
+caption 4 "One red blood cell makes the full round trip in under a minute."
+caption clear; title clear
